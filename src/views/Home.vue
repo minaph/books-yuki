@@ -129,7 +129,7 @@ export default {
           if (typeof indexText !== "undefined" && indexText !== "") {
             sessionStorage.removeItem("title");
             indexText = indexText.split("\n");
-            vm.$set(vm.titles, vm.titles.length + 1, vm.title);
+            vm.$set(vm.titles, vm.titles.length, vm.title);
             vm.$set(vm.indexes, vm.title, textParser(indexText, vm.indent));
             vm.title = sessionStorage.getItem("title");
           } else {
@@ -199,7 +199,7 @@ export default {
           var vm = this;
           var f = function(data) {
             console.log("got titles: " + data[0]);
-            if (typeof data[0] !== "undefined") {
+            if (typeof data !== "undefined" && typeof data[0] === "object") {
               vm.titles = data[0];
               loadIndexes();
             }
@@ -230,7 +230,7 @@ export default {
           }
         }
       },
-      immediate: true
+      immediate: false
     },
     request: {
       handler: function(val, old) {
@@ -255,7 +255,7 @@ export default {
           };
           var request = gapi.client.sheets.spreadsheets.values.update(
             val.params,
-            val.valueRangeBody
+            valueRangeBody
           );
           request.then(
             function(response) {

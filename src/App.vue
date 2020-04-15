@@ -72,7 +72,6 @@ export default {
     function initClient() {
       console.log("initClient");
       // var vm = this;
-      console.log(vm.initParams);
       gapi.client.init(vm.initParams).then(
         function() {
           gapi.auth2.getAuthInstance().isSignedIn.get();
