@@ -138,47 +138,9 @@ export default {
         };
       }
       return Object.entries(ans)[0];
-    },
+    }
   },
   created() {
-    // var data2 = window.localStorage.getItem("sheet");
-    if (this.SS_ID === null || this.indent === null) {
-      [
-        "説明(1/4)\nようこそ。\nこれは、読んだ本の目次にメモをつけ、見やすく保管するためのサービスです。\n現時点では、製作者である美濃佑輝の善意によって運営されています。",
-        "説明(2/4)\n以下をご用意ください。\n\nインデント付き目次データ（インデント文字はなんでもよい）\nデータ保管用スプレッドシートのURL",
-        "説明(3/4)\nインデント付き目次データの例（インデント文字が「　（全角スペース）」の場合）\n\n1. このサービスの趣旨\n　1.1 必要なもの\n　1.2 目次データの例\n2. 初期設定\n　2.1 スプレッドシート登録\n　2.2 インデント文字の登録",
-        "説明(4/4)\n以上で説明を終わります。\nこの説明を読み直したい、または初期設定をやり直したい場合は、右上の「初期設定」ボタンを押してください。"
-      ].forEach(alert);
-    }
-    if (this.SS_ID === null) {
-      var url = prompt(
-        "初期設定\nデータ保存用のスプレッドシートのURLを入力してください\n現在、どのシートに保存するかは変更できません。"
-      );
-      if (typeof url !== "undefined" && url !== "") {
-        this.SS_ID = url.match(
-          /(?<=docs.google.com\/spreadsheets\/d\/)[a-zA-Z0-9\-_]+/
-        );
-        console.info("スプレッドシートID：" + this.SS_ID);
-        window.localStorage.setItem("SS_ID", this.SS_ID);
-      } else {
-        console.info("無効なURLです。");
-      }
-    }
-    if (this.indent === null) {
-      var indent = prompt(
-        '初期設定\n目次のインデント文字を指定してください。\nタブを入力する場合は、"tab"と入力してください。\nバックスラッシュによるエスケープ文字も利用可能です。'
-      );
-      if (typeof indent !== "undefined" && indent !== "") {
-        if (indent === "tab") {
-          indent = "\t";
-        }
-        this.indent = indent;
-        console.info("インデント：" + this.indent);
-        window.localStorage.setItem("indent", this.indent);
-      } else {
-        console.info("無効なインデント文字です。");
-      }
-    }
     window.addEventListener("beforeunload", event => {
       // Cancel the event as stated by the standard.
       event.preventDefault();
@@ -227,6 +189,44 @@ export default {
               console.log(vm.indexes);
             }
             vm.request = requestObject("get", params, f);
+          }
+
+          if (this.SS_ID === null || this.indent === null) {
+            [
+              "説明(1/4)\nようこそ。\nこれは、読んだ本の目次にメモをつけ、見やすく保管するためのサービスです。\n現時点では、製作者である美濃佑輝の善意によって運営されています。",
+              "説明(2/4)\n以下をご用意ください。\n\nインデント付き目次データ（インデント文字はなんでもよい）\nデータ保管用スプレッドシートのURL",
+              "説明(3/4)\nインデント付き目次データの例（インデント文字が「　（全角スペース）」の場合）\n\n1. このサービスの趣旨\n　1.1 必要なもの\n　1.2 目次データの例\n2. 初期設定\n　2.1 スプレッドシート登録\n　2.2 インデント文字の登録",
+              "説明(4/4)\n以上で説明を終わります。\nこの説明を読み直したい、または初期設定をやり直したい場合は、右上の「初期設定」ボタンを押してください。"
+            ].forEach(alert);
+          }
+          if (this.SS_ID === null) {
+            var url = prompt(
+              "初期設定\nデータ保存用のスプレッドシートのURLを入力してください\n現在、どのシートに保存するかは変更できません。"
+            );
+            if (typeof url !== "undefined" && url !== "") {
+              this.SS_ID = url.match(
+                /(?<=docs.google.com\/spreadsheets\/d\/)[a-zA-Z0-9\-_]+/
+              );
+              console.info("スプレッドシートID：" + this.SS_ID);
+              window.localStorage.setItem("SS_ID", this.SS_ID);
+            } else {
+              console.info("無効なURLです。");
+            }
+          }
+          if (this.indent === null) {
+            var indent = prompt(
+              '初期設定\n目次のインデント文字を指定してください。\nタブを入力する場合は、"tab"と入力してください。\nバックスラッシュによるエスケープ文字も利用可能です。'
+            );
+            if (typeof indent !== "undefined" && indent !== "") {
+              if (indent === "tab") {
+                indent = "\t";
+              }
+              this.indent = indent;
+              console.info("インデント：" + this.indent);
+              window.localStorage.setItem("indent", this.indent);
+            } else {
+              console.info("無効なインデント文字です。");
+            }
           }
         }
       },
@@ -293,7 +293,7 @@ export default {
           this.request = requestObject(
             "set",
             params,
-            function(){},
+            function() {},
             values,
             "COLUMNS"
           );
