@@ -234,38 +234,44 @@ export default {
     },
     request: {
       handler: function(val, old) {
-        if (val.method === "get") {
-          const request = gapi.client.sheets.spreadsheets.values.get(
-            val.params
-          );
-          request.then(
-            function(response) {
-              console.log(response);
-              val.callBack(response.result.values || response);
-            },
-            function(reason) {
-              console.error("error: " + reason.result.error.message);
-            }
-          );
-        } else if (val.method === "set") {
-          var valueRangeBody = {
-            range: val.params["range"],
-            values: val.values,
-            majorDimension: val.majorDimension
-          };
-          var request = gapi.client.sheets.spreadsheets.values.update(
-            val.params,
-            valueRangeBody
-          );
-          request.then(
-            function(response) {
-              val.callBack(response);
-              console.log(response.result);
-            },
-            function(reason) {
-              console.error("error: " + reason.result.error.message);
-            }
-          );
+        let request;
+        switch (val.method) {
+          case "get":
+            request = gapi.client.sheets.spreadsheets.values.get(
+              val.params
+            );
+            request.then(
+              function(response) {
+                console.log(response);
+                val.callBack(response.result.values || response);
+              },
+              function(reason) {
+                console.error("error: " + reason.result.error.message);
+              }
+            );
+            break;
+          case "set":
+            var valueRangeBody = {
+              range: val.params["range"],
+              values: val.values,
+              majorDimension: val.majorDimension
+            };
+            request = gapi.client.sheets.spreadsheets.values.update(
+              val.params,
+              valueRangeBody
+            );
+            request.then(
+              function(response) {
+                val.callBack(response);
+                console.log(response.result);
+              },
+              function(reason) {
+                console.error("error: " + reason.result.error.message);
+              }
+            );
+            break;
+          default: 
+            break;
         }
       },
       deep: false,

@@ -27,8 +27,7 @@ export default {
   },
   data() {
     return {
-      status: false,
-      auth: false
+      status: false
     };
   },
   computed: {
@@ -81,12 +80,6 @@ export default {
           console.error(JSON.stringify(error, null, 2));
         }
       );
-    }
-  },
-  watch: {
-    auth() {
-      this.auth = false;
-      gapi.auth2.getAuthInstance().signIn();
     }
   },
   methods: {
