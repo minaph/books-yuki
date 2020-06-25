@@ -27,7 +27,7 @@ export default {
   },
   data() {
     return {
-      status: { ie: false, y3: { value: false } },
+      status: false,
       auth: false
     };
   },
@@ -42,7 +42,7 @@ export default {
       scope: "https://www.googleapis.com/auth/spreadsheets"
     }),
     signIn() {
-      return this.status.ie && this.status.y3.value;
+      return this.status && gapi.auth2.getAuthInstance().isSignedIn.get();
     }
   },
   beforeCreate() {
@@ -74,8 +74,8 @@ export default {
       // var vm = this;
       gapi.client.init(vm.initParams).then(
         function() {
-          gapi.auth2.getAuthInstance().isSignedIn.get();
-          vm.status = gapi.auth2.getAuthInstance().isSignedIn;
+          // gapi.auth2.getAuthInstance().isSignedIn.get();
+          vm.status = true;
         },
         function(error) {
           console.error(JSON.stringify(error, null, 2));
