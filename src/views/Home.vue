@@ -1,14 +1,19 @@
 <template>
   <div class="home">
+    <loading :load="load" :text="loadingText" @present="load=false" />
     <div>
       <ion-button @click="registerButton[1]()">{{registerButton[0]}}</ion-button>
       <ion-button @click="updateFlag = true">保存</ion-button>
-      <tree
-        v-for="name in Object.keys(indexes).reverse()"
-        :key="name + Object.keys(indexes[name]).length"
-        :content="name"
-        :children="indexes[name]"
-      />
+      <ion-reorder-group @ionItemReorder="doReorder($event)" disabled="false">
+        <tree
+          v-for="name in titles"
+          :key="name + Object.keys(indexes[name]).length"
+          :content="name"
+          :children="indexes[name]"
+        >
+          <ion-reorder v-on:click.prevent />
+        </tree>
+      </ion-reorder-group>
     </div>
   </div>
 </template>
@@ -55,11 +60,17 @@ function textParser(textArray, indent) {
     while (d[0] === indent) {
       d = d.slice(1);
       parent = parent[log[log_index]];
+      if (typeof parent === "undefined") {
+        debugger;
+      }
       log_index++;
     }
     if (d[0] === "_") {
       parent["comment"] = d.slice(1);
     } else {
+      if (!("comment" in parent)) {
+        parent["comment"] = "";
+      }
       while (typeof parent[d] !== "undefined") {
         console.info("目次の重複を検出（上書きを回避しました）：" + d);
         d += " ";
@@ -89,10 +100,15 @@ function arrayMaker(o, indent, spaces = "") {
   return ans;
 }
 
-import Tree from "./Tree.vue";
+// import Tree from "./Tree.vue";
+import Tree from "../components/TreeF";
+import loading from "../components/loading.vue";
 export default {
   name: "Home",
-  components: { Tree },
+  components: {
+    Tree,
+    loading
+  },
   props: {
     signIn: {
       default: false
@@ -101,12 +117,14 @@ export default {
   data() {
     return {
       title: sessionStorage.getItem("title"),
-      titles: [],
+      titles: new Array(),
       indexes: new Object(),
       SS_ID: window.localStorage.getItem("SS_ID"),
       indent: window.localStorage.getItem("indent"),
       request: requestObject(),
-      updateFlag: false
+      updateFlag: false,
+      load: false,
+      loadingText: "目次データをロードしています"
     };
   },
   computed: {
@@ -152,7 +170,47 @@ export default {
   watch: {
     signIn: {
       handler: function(val, old) {
+        if (this.SS_ID === null || this.indent === null) {
+          [
+            "説明(1/4)\nようこそ。\nこれは、読んだ本の目次にメモをつけ、見やすく保管するためのサービスです。\n現時点では、製作者である美濃佑輝の善意によって運営されています。",
+            "説明(2/4)\n以下をご用意ください。\n\nインデント付き目次データ（インデント文字はなんでもよい）\nデータ保管用スプレッドシートのURL",
+            "説明(3/4)\nインデント付き目次データの例（インデント文字が「　（全角スペース）」の場合）\n\n1. このサービスの趣旨\n　1.1 必要なもの\n　1.2 目次データの例\n2. 初期設定\n　2.1 スプレッドシート登録\n　2.2 インデント文字の登録",
+            "説明(4/4)\n以上で説明を終わります。\nこの説明を読み直したい、または初期設定をやり直したい場合は、右上の「初期設定」ボタンを押してください。"
+          ].forEach(alert);
+        }
+        if (this.SS_ID === null) {
+          var url = prompt(
+            "初期設定\nデータ保存用のスプレッドシートのURLを入力してください\n現在、どのシートに保存するかは変更できません。"
+          );
+          if (typeof url !== "undefined" && url !== "") {
+            this.SS_ID = url.match(
+              /(?<=docs.google.com\/spreadsheets\/d\/)[a-zA-Z0-9\-_]+/
+            );
+            console.info("スプレッドシートID：" + this.SS_ID);
+            window.localStorage.setItem("SS_ID", this.SS_ID);
+          } else {
+            console.info("無効なURLです。");
+          }
+        }
+        if (this.indent === null) {
+          var indent = prompt(
+            '初期設定\n目次のインデント文字を指定してください。\nタブを入力する場合は、"tab"と入力してください。\nバックスラッシュによるエスケープ文字も利用可能です。'
+          );
+          if (typeof indent !== "undefined" && indent !== "") {
+            if (indent === "tab") {
+              indent = "\t";
+            }
+            this.indent = indent;
+            console.info("インデント：" + this.indent);
+            window.localStorage.setItem("indent", this.indent);
+          } else {
+            console.info("無効なインデント文字です。");
+          }
+        }
+
         if (val) {
+          this.load = true;
+
           var params = {
             spreadsheetId: this.SS_ID,
             range: "1:1"
@@ -161,10 +219,19 @@ export default {
           var vm = this;
           var f = function(data) {
             console.log("got titles: " + data[0]);
-            if (typeof data !== "undefined" && typeof data[0] === "object") {
-              vm.titles = data[0];
-              loadIndexes();
-            }
+            console.assert(
+              typeof data === "object" && typeof data[0] !== "undefined",
+              "data should be an array but " + typeof data
+            );
+            console.assert(
+              typeof vm.titles === "object" && vm.titles !== null,
+              "titles are null"
+            );
+            data[0].forEach(function(x) {
+              vm.$set(vm.indexes, x, new Object());
+            });
+            vm.$set(vm, "titles", data[0]);
+            loadIndexes();
           };
           this.request = requestObject("get", params, f);
 
@@ -187,46 +254,11 @@ export default {
               }
               console.log("Indexing complete!");
               console.log(vm.indexes);
+              // console.log(dismiss)
+              // debugger;
+              vm.$ionic.loadingController.dismiss();
             }
             vm.request = requestObject("get", params, f);
-          }
-
-          if (this.SS_ID === null || this.indent === null) {
-            [
-              "説明(1/4)\nようこそ。\nこれは、読んだ本の目次にメモをつけ、見やすく保管するためのサービスです。\n現時点では、製作者である美濃佑輝の善意によって運営されています。",
-              "説明(2/4)\n以下をご用意ください。\n\nインデント付き目次データ（インデント文字はなんでもよい）\nデータ保管用スプレッドシートのURL",
-              "説明(3/4)\nインデント付き目次データの例（インデント文字が「　（全角スペース）」の場合）\n\n1. このサービスの趣旨\n　1.1 必要なもの\n　1.2 目次データの例\n2. 初期設定\n　2.1 スプレッドシート登録\n　2.2 インデント文字の登録",
-              "説明(4/4)\n以上で説明を終わります。\nこの説明を読み直したい、または初期設定をやり直したい場合は、右上の「初期設定」ボタンを押してください。"
-            ].forEach(alert);
-          }
-          if (this.SS_ID === null) {
-            var url = prompt(
-              "初期設定\nデータ保存用のスプレッドシートのURLを入力してください\n現在、どのシートに保存するかは変更できません。"
-            );
-            if (typeof url !== "undefined" && url !== "") {
-              this.SS_ID = url.match(
-                /(?<=docs.google.com\/spreadsheets\/d\/)[a-zA-Z0-9\-_]+/
-              );
-              console.info("スプレッドシートID：" + this.SS_ID);
-              window.localStorage.setItem("SS_ID", this.SS_ID);
-            } else {
-              console.info("無効なURLです。");
-            }
-          }
-          if (this.indent === null) {
-            var indent = prompt(
-              '初期設定\n目次のインデント文字を指定してください。\nタブを入力する場合は、"tab"と入力してください。\nバックスラッシュによるエスケープ文字も利用可能です。'
-            );
-            if (typeof indent !== "undefined" && indent !== "") {
-              if (indent === "tab") {
-                indent = "\t";
-              }
-              this.indent = indent;
-              console.info("インデント：" + this.indent);
-              window.localStorage.setItem("indent", this.indent);
-            } else {
-              console.info("無効なインデント文字です。");
-            }
           }
         }
       },
@@ -237,11 +269,10 @@ export default {
         let request;
         switch (val.method) {
           case "get":
-            request = gapi.client.sheets.spreadsheets.values.get(
-              val.params
-            );
+            request = gapi.client.sheets.spreadsheets.values.get(val.params);
             request.then(
               function(response) {
+                // debugger;
                 console.log(response);
                 val.callBack(response.result.values || response);
               },
@@ -270,7 +301,7 @@ export default {
               }
             );
             break;
-          default: 
+          default:
             break;
         }
       },
@@ -308,7 +339,19 @@ export default {
       immediate: false
     }
   },
-  methods: {},
+  methods: {
+    doReorder(event) {
+      // this.titles[event.detail.from], this.titles[event.detail.to] = this.titles[event.detail.to], this.titles[event.detail.from]
+      // this.indexes[event.detail.from], this.indexes[event.detail.to] = this.indexes[event.detail.to], this.indexes[event.detail.from]
+
+      var changed = event.detail.complete(this.titles);
+      for (var i = 0; i < changed.length; i++) {
+        if (changed[i] !== this.titles[i]) {
+          this.$set(this.titles, i, changed[i]);
+        }
+      }
+    }
+  },
   beforeDestroy() {
     if (confirm("作業内容を保存しますか？")) {
       this.updateFlag = true;
@@ -317,3 +360,9 @@ export default {
 };
 </script>
 
+<style scoped>
+ion-reorder {
+  float: right;
+  padding-right: 10px;
+}
+</style>
