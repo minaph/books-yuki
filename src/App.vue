@@ -1,19 +1,19 @@
 <template>
   <ion-app>
-    <vue-gapi @initGapi="initialized = true" />
+    <vue-gapi @initGapi="startMonitoring" />
     <ion-toolbar>
       <ion-buttons slot="start" @click="fullscreen()">
         <ion-button>fullscreen</ion-button>
       </ion-buttons>
       <ion-title>books</ion-title>
-      <ion-buttons slot="end" @click="resetData()">
-        <ion-button>初期設定</ion-button>
+      <ion-buttons slot="end">
+        <SettingModalButton :settings="settings()" :gauth="gauth" />
       </ion-buttons>
     </ion-toolbar>
     <ion-content>
       <!-- <ion-button size="small" v-show="signIn" @click="$set(Google,'signOut', true)">Sign Out</ion-button> -->
-      <login-button v-show="initialized && !signIn()" />
-      <Home :signIn="signIn()" />
+      <login-button v-show="initialized && !signIn()" :gauth="gauth" />
+      <Home :signIn="signIn()" ref="home" />
     </ion-content>
   </ion-app>
 </template>
@@ -23,16 +23,20 @@ require("dotenv").config();
 import Home from "./views/Home.vue";
 import loginButton from "./components/loginButton";
 import vueGapi from "./components/gapi";
+import SettingModalButton from "./views/SettingModalButton";
 export default {
   name: "App",
   components: {
     Home,
     loginButton,
-    vueGapi
+    vueGapi,
+    SettingModalButton
   },
   data() {
     return {
-      initialized: false
+      initialized: false,
+      // auth: false,
+      gauth: {}
     };
   },
   computed: {
@@ -46,10 +50,20 @@ export default {
   },
   created() {},
   methods: {
-    signIn() {
-      var auth = this.initialized && gapi.auth2.getAuthInstance().isSignedIn.get()
-      return auth;
+    startMonitoring(gauth) {
+      this.initialized = true;
+      this.$set(this, "gauth", gauth);
     },
+    signIn() {
+      if (this.initialized) {
+        return this.gauth.isSignedIn.get();
+      }
+      return false;
+    },
+    // signIn(flag) {
+    //   console.log("received changes");
+    //   this.auth = flag;
+    // },
     fullscreen() {
       console.log("Fullscreen");
       (function() {
@@ -77,14 +91,20 @@ export default {
         }
       })();
     },
-    resetData() {
-      if (confirm("初期設定前に、現在のアカウントからログアウトしますか？")) {
-        gapi.auth2.getAuthInstance().signOut();
+    settings() {
+      if (
+        typeof this.$refs === "undefined" ||
+        typeof this.$refs.home === "undefined"
+      ) {
+        return {
+          url: "",
+          SS_ID: "",
+          data: "",
+          index: "",
+          indent: ""
+        };
       }
-      localStorage.clear();
-      sessionStorage.clear();
-      console.info("Data cleaned up");
-      location.reload();
+      return this.$refs.home.settings;
     }
   }
 };

@@ -1,9 +1,18 @@
 <template>
   <div class="home">
+    <SpreadSheet
+      v-bind="ss"
+      @send="ss.send=false"
+      @get="ssActions.get"
+      @set="ssActions.set"
+      @error="handler"
+    />
     <loading :load="load" :text="loadingText" @present="load=false" />
     <div>
-      <ion-button @click="registerButton[1]()">{{registerButton[0]}}</ion-button>
-      <ion-button @click="updateFlag = true">保存</ion-button>
+      <EditModalButton :titles="titles" :indexes="indexes" :indent="settings.indent"/>
+      <ion-button @click="updateFlag = true">{{buttonLabel}}</ion-button>
+      <br />
+      <span ref="error"></span>
       <ion-reorder-group @ionItemReorder="doReorder($event)" disabled="false">
         <tree
           v-for="name in titles"
@@ -19,22 +28,6 @@
 </template>
 
 <script>
-function requestObject(
-  m = "",
-  p = new Object(),
-  c = function() {},
-  v = new Array(),
-  md = "RAWS"
-) {
-  return {
-    method: m,
-    params: p,
-    callBack: c,
-    values: v,
-    majorDimension: md
-  };
-}
-
 function A1(n, start = "A") {
   // Aを0としたときのアルファベット表示
   var a = Math.ceil((n + 1) / 26);
@@ -49,38 +42,7 @@ function A1(n, start = "A") {
   return result;
 }
 
-function textParser(textArray, indent) {
-  var c = new Object();
-  var log = [];
-  var b = textArray;
-  for (var i = 0; i < b.length; i++) {
-    var d = b[i];
-    var log_index = 0;
-    var parent = c;
-    while (d[0] === indent) {
-      d = d.slice(1);
-      parent = parent[log[log_index]];
-      if (typeof parent === "undefined") {
-        debugger;
-      }
-      log_index++;
-    }
-    if (d[0] === "_") {
-      parent["comment"] = d.slice(1);
-    } else {
-      if (!("comment" in parent)) {
-        parent["comment"] = "";
-      }
-      while (typeof parent[d] !== "undefined") {
-        console.info("目次の重複を検出（上書きを回避しました）：" + d);
-        d += " ";
-      }
-      parent[d] = new Object();
-      log[log_index] = d;
-    }
-  }
-  return c;
-}
+
 function arrayMaker(o, indent, spaces = "") {
   var list = Object.keys(o);
   var ans = [];
@@ -103,11 +65,16 @@ function arrayMaker(o, indent, spaces = "") {
 // import Tree from "./Tree.vue";
 import Tree from "../components/TreeF";
 import loading from "../components/loading.vue";
+import SpreadSheet from "../components/SpreadSheet.vue";
+import EditModalButton from "./EditModalButton"
+import textParser from "../components/parser.js"
 export default {
   name: "Home",
   components: {
     Tree,
-    loading
+    loading,
+    SpreadSheet,
+    EditModalButton
   },
   props: {
     signIn: {
@@ -116,46 +83,45 @@ export default {
   },
   data() {
     return {
-      title: sessionStorage.getItem("title"),
+      isBeginner: true,
+      editIndexText: false,
       titles: new Array(),
       indexes: new Object(),
-      SS_ID: window.localStorage.getItem("SS_ID"),
-      indent: window.localStorage.getItem("indent"),
-      request: requestObject(),
+      settings: {
+        SS_ID: window.localStorage.getItem("SS_ID"),
+        indent: window.localStorage.getItem("indent"),
+        url: window.localStorage.getItem("url"),
+        index: window.localStorage.getItem("index"),
+        data: window.localStorage.getItem("data")
+      },
       updateFlag: false,
       load: false,
-      loadingText: "目次データをロードしています"
+      loadingText: "目次データをロードしています",
+      ss: {
+        method: "",
+        params: {},
+        values: [],
+        majorDimension: "",
+        send: false
+      },
+      ssActions: {
+        get: () => {},
+        set: () => {}
+      },
+      buttonLabel: "保存"
     };
   },
   computed: {
-    registerButton() {
-      let ans = new Object();
-      var vm = this;
-      if (vm.title === null) {
-        ans["本を登録する"] = function() {
-          vm.title = prompt("書の題名");
-          if (typeof vm.title !== "undefined" && vm.title !== "") {
-            sessionStorage.setItem("title", vm.title);
-            vm.title = sessionStorage.getItem("title");
-          } else {
-            console.info("タイトルが無効です。");
-          }
-        };
-      } else {
-        ans[vm.title] = function() {
-          var indexText = prompt("目次一覧");
-          if (typeof indexText !== "undefined" && indexText !== "") {
-            sessionStorage.removeItem("title");
-            indexText = indexText.split("\n");
-            vm.$set(vm.titles, vm.titles.length, vm.title);
-            vm.$set(vm.indexes, vm.title, textParser(indexText, vm.indent));
-            vm.title = sessionStorage.getItem("title");
-          } else {
-            console.info("目次が無効です。");
-          }
-        };
+    valuesArray() {
+      var values = [];
+      var list = Object.keys(this.indexes);
+      for (var k = 0; k < list.length; k++) {
+        var arr = [];
+        arr.push(list[k]);
+        arr.push(...arrayMaker(this.indexes[list[k]], this.settings.indent));
+        values.push(arr);
       }
-      return Object.entries(ans)[0];
+      return values;
     }
   },
   created() {
@@ -170,170 +136,142 @@ export default {
   watch: {
     signIn: {
       handler: function(val, old) {
-        if (this.SS_ID === null || this.indent === null) {
-          [
-            "説明(1/4)\nようこそ。\nこれは、読んだ本の目次にメモをつけ、見やすく保管するためのサービスです。\n現時点では、製作者である美濃佑輝の善意によって運営されています。",
-            "説明(2/4)\n以下をご用意ください。\n\nインデント付き目次データ（インデント文字はなんでもよい）\nデータ保管用スプレッドシートのURL",
-            "説明(3/4)\nインデント付き目次データの例（インデント文字が「　（全角スペース）」の場合）\n\n1. このサービスの趣旨\n　1.1 必要なもの\n　1.2 目次データの例\n2. 初期設定\n　2.1 スプレッドシート登録\n　2.2 インデント文字の登録",
-            "説明(4/4)\n以上で説明を終わります。\nこの説明を読み直したい、または初期設定をやり直したい場合は、右上の「初期設定」ボタンを押してください。"
-          ].forEach(alert);
-        }
-        if (this.SS_ID === null) {
-          var url = prompt(
-            "初期設定\nデータ保存用のスプレッドシートのURLを入力してください\n現在、どのシートに保存するかは変更できません。"
-          );
-          if (typeof url !== "undefined" && url !== "") {
-            this.SS_ID = url.match(
-              /(?<=docs.google.com\/spreadsheets\/d\/)[a-zA-Z0-9\-_]+/
-            );
-            console.info("スプレッドシートID：" + this.SS_ID);
-            window.localStorage.setItem("SS_ID", this.SS_ID);
-          } else {
-            console.info("無効なURLです。");
-          }
-        }
-        if (this.indent === null) {
-          var indent = prompt(
-            '初期設定\n目次のインデント文字を指定してください。\nタブを入力する場合は、"tab"と入力してください。\nバックスラッシュによるエスケープ文字も利用可能です。'
-          );
-          if (typeof indent !== "undefined" && indent !== "") {
-            if (indent === "tab") {
-              indent = "\t";
-            }
-            this.indent = indent;
-            console.info("インデント：" + this.indent);
-            window.localStorage.setItem("indent", this.indent);
-          } else {
-            console.info("無効なインデント文字です。");
-          }
-        }
-
-        if (val) {
+        var vm = this;
+        this.isBeginner = !Object.keys(this.settings).reduce(function(a, b) {
+          return a && typeof vm.settings[b] === "string";
+        });
+        if (val && !this.isBeginner) {
           this.load = true;
-
-          var params = {
-            spreadsheetId: this.SS_ID,
-            range: "1:1"
+          this.ss.method = "get";
+          this.ss.params = {
+            spreadsheetId: this.settings.SS_ID,
+            range: "'" + this.settings.index + "'!" + "A:A",
+            majorDimension: "COLUMNS"
             // valueRenderOption: "",
           };
-          var vm = this;
-          var f = function(data) {
-            console.log("got titles: " + data[0]);
-            console.assert(
-              typeof data === "object" && typeof data[0] !== "undefined",
-              "data should be an array but " + typeof data
-            );
-            console.assert(
-              typeof vm.titles === "object" && vm.titles !== null,
-              "titles are null"
-            );
-            data[0].forEach(function(x) {
-              vm.$set(vm.indexes, x, new Object());
-            });
-            vm.$set(vm, "titles", data[0]);
-            loadIndexes();
-          };
-          this.request = requestObject("get", params, f);
-
-          function loadIndexes() {
-            console.log("loadIndexes");
-            console.log(vm.titles);
-            var params = {
-              spreadsheetId: vm.SS_ID,
-              range: "A:" + A1(vm.titles.length - 1),
-              majorDimension: "COLUMNS"
-              // valueRenderOption: "",
-            };
-            function f(data) {
-              for (var _i = 0; _i < data.length; _i++) {
-                vm.$set(
-                  vm.indexes,
-                  data[_i][0],
-                  textParser(data[_i].slice(1), vm.indent)
-                );
-              }
-              console.log("Indexing complete!");
-              console.log(vm.indexes);
-              // console.log(dismiss)
-              // debugger;
-              vm.$ionic.loadingController.dismiss();
+          this.ssActions.get = function(data) {
+            console.log("got titles: " + JSON.stringify(data));
+            var nodata =
+              !Array.isArray(data) || data.length === 0 || data[0].length === 0;
+            if (nodata) {
+              initIndex(parseData);
+            } else {
+              parseData(data);
             }
-            vm.request = requestObject("get", params, f);
-          }
+          };
+          // this.request = requestObject("get", params, f);
+          this.ss.send = true;
+        }
+
+        function parseData(data) {
+          // data = data.map(x=>x[0])
+          data[0].forEach(function(x) {
+            vm.$set(vm.indexes, x, new Object());
+          });
+          vm.$set(vm, "titles", data[0]);
+          loadIndexes();
+        }
+
+        function loadIndexes() {
+          // debugger;
+          console.log("loadIndexes");
+          vm.ss.params = {
+            spreadsheetId: vm.settings.SS_ID,
+            range:
+              "'" + vm.settings.data + "'!" + "A:" + A1(vm.titles.length - 1),
+            majorDimension: "COLUMNS"
+            // valueRenderOption: "",
+          };
+          vm.ssActions.get = function f(data) {
+            for (var _i = 0; _i < data.length; _i++) {
+              vm.$set(
+                vm.indexes,
+                data[_i][0],
+                textParser(data[_i].slice(1), vm.settings.indent)
+              );
+            }
+            console.log("Indexing complete!");
+            console.log(vm.indexes);
+            // console.log(dismiss)
+            // debugger;
+            vm.$ionic.loadingController.dismiss();
+          };
+          // vm.request = requestObject("get", params, f);
+          vm.ss.send = true;
+        }
+
+        function initIndex(f) {
+          console.log("No index data available");
+          vm.ss.method = "get";
+          vm.ss.params = {
+            spreadsheetId: vm.settings.SS_ID,
+            range: "'" + vm.settings.data + "'!" + "1:1"
+            // valueRenderOption: "",
+          };
+          vm.ssActions.get = function(data) {
+            var nodata =
+              !Array.isArray(data) || data.length === 0 || data[0].length === 0;
+            if (nodata) {
+              console.log("Your data is empty");
+              data = [[]];
+              vm.$ionic.loadingController.dismiss();
+            } else {
+              console.log("got titles: " + data[0]);
+              f(data);
+            }
+          };
+          vm.ss.send = true;
         }
       },
       immediate: false
     },
-    request: {
-      handler: function(val, old) {
-        let request;
-        switch (val.method) {
-          case "get":
-            request = gapi.client.sheets.spreadsheets.values.get(val.params);
-            request.then(
-              function(response) {
-                // debugger;
-                console.log(response);
-                val.callBack(response.result.values || response);
-              },
-              function(reason) {
-                console.error("error: " + reason.result.error.message);
-              }
-            );
-            break;
-          case "set":
-            var valueRangeBody = {
-              range: val.params["range"],
-              values: val.values,
-              majorDimension: val.majorDimension
-            };
-            request = gapi.client.sheets.spreadsheets.values.update(
-              val.params,
-              valueRangeBody
-            );
-            request.then(
-              function(response) {
-                val.callBack(response);
-                console.log(response.result);
-              },
-              function(reason) {
-                console.error("error: " + reason.result.error.message);
-              }
-            );
-            break;
-          default:
-            break;
-        }
-      },
-      deep: false,
-      immediate: false
-    },
+    // request: {
+
+    //   deep: false,
+    //   immediate: false
+    // },
     updateFlag: {
       handler: function(val, old) {
         if (val) {
           this.updateFlag = false;
+          this.buttonLabel = "スプレッドシートにデータを送信中...";
+          this.loadingText = this.buttonLabel;
+          this.load = true;
 
-          var params = {
-            spreadsheetId: this.SS_ID,
-            range: "A:" + A1(this.titles.length - 1),
+          this.ss.method = "set";
+          this.ss.params = {
+            spreadsheetId: this.settings.SS_ID,
+            range:
+              "'" +
+              this.settings.data +
+              "'!" +
+              "A:" +
+              A1(this.titles.length - 1),
             valueInputOption: "RAW"
           };
-          var values = [];
-          var list = Object.keys(this.indexes);
-          for (var k = 0; k < list.length; k++) {
-            var arr = [];
-            arr.push(list[k]);
-            arr.push(...arrayMaker(this.indexes[list[k]], this.indent));
-            values.push(arr);
+          this.ss.values = this.valuesArray;
+          console.log(this.ss.values);
+          this.ss.majorDimension = "COLUMNS";
+          var vm = this;
+          this.ssActions.set = updateIndex;
+          this.ss.send = true;
+
+          function updateIndex() {
+            vm.ss.method = "set";
+            vm.ss.params = {
+              spreadsheetId: vm.settings.SS_ID,
+              range: "'" + vm.settings.index + "'!" + "A:A",
+              valueInputOption: "RAW"
+            };
+            vm.ss.values = [vm.titles];
+            console.log(vm.ss.values);
+            vm.ss.majorDimension = "COLUMNS";
+            vm.ssActions.set = function() {
+              vm.buttonLabel = "保存";
+              vm.$ionic.loadingController.dismiss();
+            };
+            vm.ss.send = true;
           }
-          console.log(values);
-          this.request = requestObject(
-            "set",
-            params,
-            function() {},
-            values,
-            "COLUMNS"
-          );
         }
       },
       immediate: false
@@ -341,14 +279,20 @@ export default {
   },
   methods: {
     doReorder(event) {
-      // this.titles[event.detail.from], this.titles[event.detail.to] = this.titles[event.detail.to], this.titles[event.detail.from]
-      // this.indexes[event.detail.from], this.indexes[event.detail.to] = this.indexes[event.detail.to], this.indexes[event.detail.from]
-
       var changed = event.detail.complete(this.titles);
       for (var i = 0; i < changed.length; i++) {
         if (changed[i] !== this.titles[i]) {
           this.$set(this.titles, i, changed[i]);
         }
+      }
+    },
+    handler(error) {
+      this.$ionic.loadingController.dismiss();
+      if (
+        typeof this.$refs !== "undefined" &&
+        typeof this.$refs.error !== "undefined"
+      ) {
+        this.$refs.error.textContent = "Error! "+error.result.error.message;
       }
     }
   },

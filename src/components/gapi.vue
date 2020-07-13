@@ -2,6 +2,11 @@
 <script>
 export default {
   name: "vueGapi",
+  data() {
+    return {
+      auth: false
+    };
+  },
   computed: {
     initParams: () => ({
       apiKey: process.env.VUE_APP_API_KEY,
@@ -32,17 +37,16 @@ export default {
 
     function initClient() {
       console.log("initClient");
-      // var vm = this;
       gapi.client.init(vm.initParams).then(
         function() {
-          // gapi.auth2.getAuthInstance().isSignedIn.get();
-          vm.$emit("initGapi");
+          vm.$emit("initGapi", gapi.auth2.getAuthInstance());
         },
         function(error) {
           console.error(JSON.stringify(error, null, 2));
         }
       );
     }
-  }
+  },
+  methods: {}
 };
 </script>

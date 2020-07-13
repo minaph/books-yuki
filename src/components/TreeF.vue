@@ -10,7 +10,7 @@
         <ion-label position="floating">読書メモ</ion-label>
         <ion-textarea
           :value="props.children.comment"
-          autoGrow
+          auto-grow
           @ionFocus="$options.focus()"
           @ionChange="$options.changeComments(props)"
           @ionBlur="$options.blur()"
@@ -82,6 +82,7 @@ details p {
   margin-block-start: 4px;
   margin-block-end: 4px;
   margin-left: 48px;
+  font-size: 16px;
 }
 details {
   margin-block-start: 10px;
@@ -100,9 +101,21 @@ details details {
 
 ion-textarea {
   font-size: 16px;
+  height: 55px;
+}
+summary::-webkit-details-marker {
+  display: none;
+}
+
+details summary {
+  padding-left: 10px;
+}
+
+details details summary {
+  list-style: none;
+  padding-left: 30px;
 }
 /* details p{
   margin-left: 5px;
 } */
-
 </style>

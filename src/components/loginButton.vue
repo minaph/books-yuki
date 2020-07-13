@@ -1,23 +1,16 @@
 <template>
-  <ion-button size="small" @click="auth()" :disabled="disabled()">Authorize</ion-button>
+  <ion-button size="small" @click="auth()">Authorize</ion-button>
 </template>
 <script>
 export default {
   name: "login-button",
+  props: {
+    gauth: Object
+  },
   methods: {
     auth() {
-      if (!this.disabled()) {
-        gapi.auth2.getAuthInstance().signIn();
-      }
+      this.gauth.signIn();
     },
-    disabled() {
-      var f = x => x !== "undefined";
-      return (
-        f(typeof gapi) &&
-        f(typeof gapi.auth2) &&
-        f(typeof gapi.auth2.getAuthInstance)
-      );
-    }
   }
 };
 </script>
