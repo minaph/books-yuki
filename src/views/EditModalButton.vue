@@ -23,7 +23,7 @@ export default {
       var vm = this;
       if (vm.title[0] === null) {
         ans["本を登録する"] = function() {
-          vm.$set(this.title, 0, prompt("書の題名"));
+          vm.$set(vm.title, 0, prompt("書の題名"));
           if (typeof vm.title[0] !== "undefined" && vm.title[0] !== "") {
             localStorage.setItem("title", vm.title[0]);
           } else {
