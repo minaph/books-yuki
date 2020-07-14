@@ -1,13 +1,17 @@
 <template functional>
   <div class="tree">
-    <details v-if="Object.keys(props.children).length>0">
+    <details v-if="Object.keys(props.children).length > 0">
       <summary :content="props.content" v-on:click.self>
-        {{props.content}}
+        {{ props.content }}
+        <ion-chip color="dark" outline v-if="Object.keys(props.children).length > 1">{{
+          Object.keys(props.children).length - 1
+        }}</ion-chip>
+        <!-- <ion-badge color="light" mode="ios">{{Object.keys(props.children).length -1}}</ion-badge> -->
         <slot></slot>
       </summary>
 
       <ion-item lines="full">
-        <ion-label position="floating">読書メモ</ion-label>
+        <ion-label >読書メモ</ion-label>
         <ion-textarea
           :value="props.children.comment"
           auto-grow
@@ -24,7 +28,7 @@
         :children="child"
       />
     </details>
-    <p v-else>{{props.content}}</p>
+    <p v-else>{{ props.content }}</p>
   </div>
 </template>
 
@@ -35,12 +39,12 @@ export default {
   props: {
     content: {
       types: String,
-      required: true
+      required: true,
     },
     children: {
       types: Object,
-      required: true
-    }
+      required: true,
+    },
   },
   chosenChildren(props) {
     const list = Object.keys(props.children);
@@ -70,7 +74,7 @@ export default {
   },
   blur() {
     console.groupEnd();
-  }
+  },
 };
 </script>
 
@@ -78,12 +82,12 @@ export default {
 /* details * {
   margin-left: 10px;
 } */
-details p {
+/* details p {
   margin-block-start: 4px;
   margin-block-end: 4px;
   margin-left: 48px;
   font-size: 16px;
-}
+} */
 details {
   margin-block-start: 10px;
   margin-left: 18px;
@@ -96,7 +100,11 @@ details details {
   font-size: 16px;
 }
 .sc-ion-label-md-h {
-  font-size: 11px;
+  font-size: 14px;
+}
+
+ion-item {
+  margin-left: 40px;
 }
 
 ion-textarea {
@@ -107,14 +115,22 @@ summary::-webkit-details-marker {
   display: none;
 }
 
-details summary {
+ion-chip {
+  padding-inline-start: 6px;
+  padding-inline-end: 6px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  height: 22px;
+}
+
+summary#text {
   padding-left: 10px;
 }
 
-details details summary {
+/* details details summary {
   list-style: none;
   padding-left: 30px;
-}
+} */
 /* details p{
   margin-left: 5px;
 } */

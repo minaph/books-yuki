@@ -1,18 +1,31 @@
 <template>
   <ion-app>
-    <vue-gapi @initGapi="startMonitoring" />
+    <vue-gapi @initGapi="startMonitoring" :cap="cap" />
     <ion-toolbar>
-      <ion-buttons slot="start" @click="fullscreen()">
-        <ion-button>fullscreen</ion-button>
+      <ion-buttons slot="start"> </ion-buttons>
+      <ion-buttons>
+        <ion-button @click="">並び替え</ion-button>
+        <ion-button @click="">Todoリストに送信</ion-button>
       </ion-buttons>
       <ion-title>books</ion-title>
       <ion-buttons slot="end">
-        <SettingModalButton :settings="settings()" :gauth="gauth" />
+        <!-- <ion-button @click="fullscreen()">fullscreen</ion-button> -->
+        <FullScreenButton />
+        <SettingModalButton
+          :settings="settings()"
+          :gauth="gauth"
+          :cap="cap"
+        />
       </ion-buttons>
     </ion-toolbar>
     <ion-content>
       <!-- <ion-button size="small" v-show="signIn" @click="$set(Google,'signOut', true)">Sign Out</ion-button> -->
-      <login-button v-show="initialized && !signIn()" :gauth="gauth" />
+      <login-button
+        v-show="initialized && !signIn()"
+        :gauth="gauth"
+        :cap="cap"
+        @initGapi="startMonitoring"
+      />
       <Home :signIn="signIn()" ref="home" />
     </ion-content>
   </ion-app>
@@ -23,32 +36,33 @@ require("dotenv").config();
 import Home from "./views/Home.vue";
 import loginButton from "./components/loginButton";
 import vueGapi from "./components/gapi";
+import vueGapiCapacitor from "./components/gapiCapacitor.vue";
 import SettingModalButton from "./views/SettingModalButton";
+import FullScreenButton from "./components/FullScreenButton"
 export default {
   name: "App",
   components: {
     Home,
     loginButton,
     vueGapi,
-    SettingModalButton
+    vueGapiCapacitor,
+    SettingModalButton,
+    FullScreenButton
   },
   data() {
     return {
       initialized: false,
-      // auth: false,
-      gauth: {}
+      gauth: {},
     };
   },
   computed: {
+    cap: () => true,
   },
-  beforeCreate() {
-    if (location.host.slice(0, 9) !== "localhost") {
-      console.log = function() {};
-      console.group = function() {};
-      console.groupEnd = function() {};
-    }
-  },
+  beforeCreate() {},
   created() {},
+  mounted() {
+    console.log("location: ", location.href);
+  },
   methods: {
     startMonitoring(gauth) {
       this.initialized = true;
@@ -60,37 +74,6 @@ export default {
       }
       return false;
     },
-    // signIn(flag) {
-    //   console.log("received changes");
-    //   this.auth = flag;
-    // },
-    fullscreen() {
-      console.log("Fullscreen");
-      (function() {
-        var doc = window.document;
-        var docEl = doc.documentElement;
-        var requestFullScreen =
-          docEl.requestFullscreen ||
-          docEl.mozRequestFullScreen ||
-          docEl.webkitRequestFullScreen ||
-          docEl.msRequestFullscreen;
-        var cancelFullScreen =
-          doc.exitFullscreen ||
-          doc.mozCancelFullScreen ||
-          doc.webkitExitFullscreen ||
-          doc.msExitFullscreen;
-        if (
-          !doc.fullscreenElement &&
-          !doc.mozFullScreenElement &&
-          !doc.webkitFullscreenElement &&
-          !doc.msFullscreenElement
-        ) {
-          requestFullScreen.call(docEl);
-        } else {
-          cancelFullScreen.call(doc);
-        }
-      })();
-    },
     settings() {
       if (
         typeof this.$refs === "undefined" ||
@@ -101,12 +84,12 @@ export default {
           SS_ID: "",
           data: "",
           index: "",
-          indent: ""
+          indent: "",
         };
       }
       return this.$refs.home.settings;
-    }
-  }
+    },
+  },
 };
 </script>
 

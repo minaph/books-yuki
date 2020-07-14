@@ -12,7 +12,8 @@
       <EditModalButton :titles="titles" :indexes="indexes" :indent="settings.indent"/>
       <ion-button @click="updateFlag = true">{{buttonLabel}}</ion-button>
       <br />
-      <span ref="error"></span>
+      <!-- <span ref="error"></span> -->
+      <DebugSpan :text="errorText" :debug="settings.debug" />
       <ion-reorder-group @ionItemReorder="doReorder($event)" disabled="false">
         <tree
           v-for="name in titles"
@@ -62,11 +63,32 @@ function arrayMaker(o, indent, spaces = "") {
   return ans;
 }
 
+var intro = `このイントロダクションは、初期設定が終わっていない方、取得データが空っぽだった方に表示しています。
+サイトの概要
+　このサイトは、このような形式で目次とそのメモを保存し、読んだ本の内容を効率よく覚えておこう、かんたんに見返せるようにしようというサービスです。
+　このサイトは、発案者の美濃佑輝が製作・運営しています。
+　　作者Twitter: https://twitter.com/AlphaMinaph
+使い方
+　画面右上の「設定」ボタンから各種の設定を行ってください。
+　　設定欄のすぐそばに解説ボタンがありますのでぜひご覧ください。
+　画面の左上にある「本の登録」ボタンから目次の編集ページが開きます。
+　　必ずしもなくても使えますが、ぜひインデント文字を使って目次の階層構造を記述してみてください。
+　　階層構造を記録しておくと、あなたが今ご覧になっているように、細かい目次を隠しておくことができます。
+　　　インデント文字の解説は右上の「設定」ボタンのインデント文字の欄に掲載しています。
+　　目次は下書き保存も可能です。
+　登録した目次は「保存」ボタンでデータを保存するのをわすれないでください。
+その他の機能
+　目次タイトル右側のアイコンをドラッグすることで、順番を変更できます。
+　あなたのデータは（下書きを除いて）あなたの登録したスプレッドシートに保管されています。
+　製作予定の機能
+　　目次をGoogle todoリストに登録する機能。`.split("\n")
+
 // import Tree from "./Tree.vue";
-import Tree from "../components/TreeF";
+import Tree from "../components/Tree";
 import loading from "../components/loading.vue";
 import SpreadSheet from "../components/SpreadSheet.vue";
 import EditModalButton from "./EditModalButton"
+import DebugSpan from "../components/DebugSpan"
 import textParser from "../components/parser.js"
 export default {
   name: "Home",
@@ -74,7 +96,8 @@ export default {
     Tree,
     loading,
     SpreadSheet,
-    EditModalButton
+    EditModalButton,
+    DebugSpan
   },
   props: {
     signIn: {
@@ -92,7 +115,8 @@ export default {
         indent: window.localStorage.getItem("indent"),
         url: window.localStorage.getItem("url"),
         index: window.localStorage.getItem("index"),
-        data: window.localStorage.getItem("data")
+        data: window.localStorage.getItem("data"),
+        debug: false
       },
       updateFlag: false,
       load: false,
@@ -108,7 +132,8 @@ export default {
         get: () => {},
         set: () => {}
       },
-      buttonLabel: "保存"
+      buttonLabel: "保存",
+      errorText: ""
     };
   },
   computed: {
@@ -132,13 +157,14 @@ export default {
       event.returnValue =
         "保存されていないデータは消去されます。よろしいですか？";
     });
+    // console.log = this.handler
   },
   watch: {
     signIn: {
       handler: function(val, old) {
         var vm = this;
         this.isBeginner = !Object.keys(this.settings).reduce(function(a, b) {
-          return a && typeof vm.settings[b] === "string";
+          return a && ["string","boolean"].includes(typeof vm.settings[b]);
         });
         if (val && !this.isBeginner) {
           this.load = true;
@@ -161,6 +187,9 @@ export default {
           };
           // this.request = requestObject("get", params, f);
           this.ss.send = true;
+        }else{
+          this.$set(this.titles, 0, "サイトの使い方（ここをクリック！）")
+          this.$set(this.indexes, "サイトの使い方（ここをクリック！）", textParser(intro, "　"))
         }
 
         function parseData(data) {
@@ -223,7 +252,7 @@ export default {
           vm.ss.send = true;
         }
       },
-      immediate: false
+      immediate: true
     },
     // request: {
 
@@ -288,12 +317,7 @@ export default {
     },
     handler(error) {
       this.$ionic.loadingController.dismiss();
-      if (
-        typeof this.$refs !== "undefined" &&
-        typeof this.$refs.error !== "undefined"
-      ) {
-        this.$refs.error.textContent = "Error! "+error.result.error.message;
-      }
+      this.errorText += "Error! "+error.result.error.message
     }
   },
   beforeDestroy() {

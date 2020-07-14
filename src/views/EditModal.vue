@@ -62,6 +62,6 @@ export default {
 
 <style scoped>
 ion-textarea{
-  height: 200px;
+  height: 85%;
 }
 </style>

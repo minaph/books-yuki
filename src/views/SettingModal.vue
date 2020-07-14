@@ -9,8 +9,8 @@
       </ion-toolbar>
     </ion-header>
     <ion-content fullscreen>
-      <ion-item >
-        <ion-label >SpreadSheet URL</ion-label>
+      <ion-item>
+        <ion-label>SpreadSheet URL</ion-label>
         <!-- <ion-chip id="url" @click="descriptionPopover" outline>?</ion-chip> -->
         <HintChip :description="url" />
         <ion-input
@@ -34,7 +34,11 @@
       <ion-item>
         <ion-label>インデント文字</ion-label>
         <HintChip :description="indent" />
-        <ion-input clear-input :value="settings.indent" @ionChange="editIndent" />
+        <ion-input
+          clear-input
+          :value="settings.indent"
+          @ionChange="editIndent"
+        />
       </ion-item>
       <ion-item>
         <ion-label>Googleからログアウトする</ion-label>
@@ -44,23 +48,30 @@
         <ion-label>設定を初期化する</ion-label>
         <ion-button @click="reset">reset</ion-button>
       </ion-item>
+      <ion-item>
+        <ion-label>デバッグモード</ion-label>
+        <ion-toggle @ionChange="debugmode($event)" :checked="settings.debug" />
+      </ion-item>
     </ion-content>
   </div>
 </template>
 <script>
-import HintChip from "../components/HintChip"
-import HintChipIndentDesc from "../components/HintChipIndentDesc"
-import HintChipUrlDesc from "../components/HintChipUrlDesc"
-import HintChipIndexDesc from "../components/HintChipIndexDesc"
-import HintChipDataDesc from "../components/HintChipDataDesc"
+import HintChip from "../components/HintChip";
+import HintChipIndentDesc from "../components/HintChipIndentDesc";
+import HintChipUrlDesc from "../components/HintChipUrlDesc";
+import HintChipIndexDesc from "../components/HintChipIndexDesc";
+import HintChipDataDesc from "../components/HintChipDataDesc";
+import "@codetrix-studio/capacitor-google-auth";
+import { Plugins } from "@capacitor/core";
 export default {
   name: "SettingModal",
   props: {
     settings: Object,
     gauth: Object,
+    cap: Boolean,
   },
-  components:{
-    HintChip
+  components: {
+    HintChip,
   },
   data() {
     return {
@@ -68,26 +79,19 @@ export default {
       url: HintChipUrlDesc,
       index: HintChipIndexDesc,
       data: HintChipDataDesc,
-    }
+    };
   },
   computed: {
     url2id() {
-      // if (
-      // typeof this.settings.url !== "undefined" &&
-      // this.settings.url !== ""
-      // ) {
       var SS_ID = this.settings.url.match(
         /(?<=docs.google.com\/spreadsheets\/d\/)[a-zA-Z0-9\-_]+/
       );
       return SS_ID;
-      // } else {
-      //   return "";
-      // }
-    }
+    },
   },
   methods: {
     dismissModal() {
-      ["url", "data", "index", "indent"].forEach(x => {
+      ["url", "data", "index", "indent"].forEach((x) => {
         localStorage.setItem(x, this.settings[x]);
       });
       localStorage.setItem("SS_ID", this.url2id);
@@ -96,42 +100,46 @@ export default {
       // localStorage
     },
     editUrl(event) {
-      console.log(this.settings);
-      console.log(event.target.value);
-      this.settings.url = event.target.value;
+      // console.log(this.settings);
+      // console.log(event.target.value);
+      this.$set(this.settings, "url", event.target.value);
     },
     editData(event) {
-      console.log(this.settings);
-      console.log(event.target.value);
-      this.settings.data = event.target.value;
+      // console.log(this.settings);
+      // console.log(event.target.value);
+      this.$set(this.settings, "data", event.target.value);
     },
     editIndent(event) {
-      console.log(this.settings);
-      console.log(event.target.value);
-      this.settings.indent = event.target.value;
+      // console.log(this.settings);
+      // console.log(event.target.value);
+      this.$set(this.settings, "indent", event.target.value);
     },
     editIndex(event) {
-      console.log(this.settings);
-      console.log(event.target.value);
-      this.settings.index = event.target.value;
+      // console.log(this.settings);
+      // console.log(event.target.value);
+      this.$set(this.settings, "index", event.target.value);
     },
     logout() {
-      this.gauth.signOut();
+      if (this.cap) {
+        Plugins.GoogleAuth.signOut()
+      } else {
+        this.gauth.signOut();
+      }
     },
     reset() {
-      this.gauth.signOut();
+      this.logout();
       localStorage.clear();
       sessionStorage.clear();
-      ["url", "SS_ID", "data", "index", "indent"].forEach(x => {
+      ["url", "SS_ID", "data", "index", "indent"].forEach((x) => {
         this.$set(this.settings, x, "");
       });
       console.info("Data cleaned up");
     },
-    
-  }
+    debugmode(event) {
+      this.$set(this.settings, "debug", event.target.checked);
+    },
+  },
 };
 </script>
 
-<style scoped>
-
-</style>
+<style scoped></style>

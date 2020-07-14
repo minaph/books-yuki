@@ -17,14 +17,15 @@ export default function textParser(textArray, indent) {
         if (d[0] === "_") {
             parent["comment"] = d.slice(1);
         } else {
-            if (!("comment" in parent)) {
-                parent["comment"] = "";
-            }
+            // if (!("comment" in parent)) {
+            //     parent["comment"] = "";
+            // }
             while (typeof parent[d] !== "undefined") {
                 console.info("目次の重複を検出（上書きを回避しました）：" + d);
                 d += " ";
             }
             parent[d] = new Object();
+            parent[d]["comment"] = ""
             log[log_index] = d;
         }
     }

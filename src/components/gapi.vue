@@ -1,11 +1,16 @@
 <template></template>
 <script>
+import "@codetrix-studio/capacitor-google-auth";
+import { Plugins } from "@capacitor/core";
 export default {
   name: "vueGapi",
   data() {
     return {
-      auth: false
+      auth: false,
     };
+  },
+  props: {
+    cap: Boolean,
   },
   computed: {
     initParams: () => ({
@@ -13,15 +18,16 @@ export default {
       clientId:
         "186767635929-88v3ukn6ci5f6sego30acvio50d67l2i.apps.googleusercontent.com",
       discoveryDocs: [
-        "https://sheets.googleapis.com/$discovery/rest?version=v4"
+        "https://sheets.googleapis.com/$discovery/rest?version=v4",
       ],
-      scope: "https://www.googleapis.com/auth/spreadsheets"
-    })
+      scope: "https://www.googleapis.com/auth/spreadsheets",
+    }),
   },
   created() {
     const vm = this;
     let gapiScript = document.createElement("script");
-    gapiScript.setAttribute("src", "https://apis.google.com/js/api.js");
+    // gapiScript.setAttribute("src", "https://apis.google.com/js/api.js");
+    gapiScript.setAttribute("src", "https://apis.google.com/js/platform.js");
     gapiScript.async = true;
     gapiScript.defer = true;
     gapiScript.onload = function() {
@@ -33,12 +39,21 @@ export default {
         gapiScript.onload();
       }
     };
+
     document.head.appendChild(gapiScript);
 
     function initClient() {
       console.log("initClient");
       gapi.client.init(vm.initParams).then(
         function() {
+          if (vm.cap) {
+            var code = localStorage.getItem("code");
+            if (code !== null && code !== "null") {
+              gapi.client.setToken({
+                access_token: code,
+              });
+            }
+          }
           vm.$emit("initGapi", gapi.auth2.getAuthInstance());
         },
         function(error) {
@@ -47,6 +62,6 @@ export default {
       );
     }
   },
-  methods: {}
+  methods: {},
 };
 </script>

@@ -1,0 +1,17 @@
+{
+  "appId": "books.yuki.app",
+  "appName": "books",
+  "bundledWebRuntime": false,
+  "npmClient": "npm",
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    },
+    "GoogleAuth": {
+      "scopes": ["profile", "email", "https://www.googleapis.com/auth/spreadsheets"],
+      "serverClientId": "186767635929-88v3ukn6ci5f6sego30acvio50d67l2i.apps.googleusercontent.com"
+    }
+  },
+  "cordova": {}
+}

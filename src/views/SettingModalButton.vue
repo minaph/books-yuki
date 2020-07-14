@@ -9,7 +9,8 @@ export default {
   name: "SettingModalButton",
   props: {
     settings: Object,
-    gauth: Object
+    gauth: Object,
+    cap: Boolean
   },
   methods: {
     openModal() {
@@ -19,7 +20,8 @@ export default {
           componentProps: {
             propsData: {
               settings: this.settings,
-              gauth: this.gauth
+              gauth: this.gauth,
+              cap: this.cap
             }
           }
         })
