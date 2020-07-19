@@ -1,33 +1,25 @@
 <template>
+  <!-- done -->
   <ion-app>
     <vue-gapi @initGapi="startMonitoring" :cap="cap" />
-    <ion-toolbar>
-      <ion-buttons slot="start"> </ion-buttons>
-      <ion-buttons>
-        <ion-button @click="">並び替え</ion-button>
-        <ion-button @click="">Todoリストに送信</ion-button>
-      </ion-buttons>
+    <!--　Todo: ここからHomeへ -->
+    <ion-toolbar> 
       <ion-title>books</ion-title>
       <ion-buttons slot="end">
-        <!-- <ion-button @click="fullscreen()">fullscreen</ion-button> -->
-        <FullScreenButton />
-        <SettingModalButton
-          :settings="settings()"
+        <login-button
+          v-show="initialized && !signIn"
           :gauth="gauth"
           :cap="cap"
         />
+        <FullScreenButton />
+        <SettingModalButton :settings="settings" :gauth="gauth" :cap="cap" />
       </ion-buttons>
     </ion-toolbar>
+
     <ion-content>
-      <!-- <ion-button size="small" v-show="signIn" @click="$set(Google,'signOut', true)">Sign Out</ion-button> -->
-      <login-button
-        v-show="initialized && !signIn()"
-        :gauth="gauth"
-        :cap="cap"
-        @initGapi="startMonitoring"
-      />
-      <Home :signIn="signIn()" ref="home" />
+      <Home :signIn="signIn" :settings="settings" />
     </ion-content>
+    <!-- ここまで -->
   </ion-app>
 </template>
 
@@ -38,7 +30,7 @@ import loginButton from "./components/loginButton";
 import vueGapi from "./components/gapi";
 import vueGapiCapacitor from "./components/gapiCapacitor.vue";
 import SettingModalButton from "./views/SettingModalButton";
-import FullScreenButton from "./components/FullScreenButton"
+import FullScreenButton from "./components/FullScreenButton";
 export default {
   name: "App",
   components: {
@@ -47,16 +39,32 @@ export default {
     vueGapi,
     vueGapiCapacitor,
     SettingModalButton,
-    FullScreenButton
+    FullScreenButton,
   },
   data() {
     return {
       initialized: false,
-      gauth: {},
+      gauth: {
+        isSignedIn: {
+          get: () => false,
+        },
+      },
+      settings: {
+        SS_ID: window.localStorage.getItem("SS_ID"),
+        indent: window.localStorage.getItem("indent"),
+        url: window.localStorage.getItem("url"),
+        index: window.localStorage.getItem("index"),
+        data: window.localStorage.getItem("data"),
+        debug: false,
+      },
     };
   },
   computed: {
     cap: () => true,
+    signIn() {
+      var status = this.gauth.isSignedIn.get();
+      return status;
+    },
   },
   beforeCreate() {},
   created() {},
@@ -66,28 +74,9 @@ export default {
   methods: {
     startMonitoring(gauth) {
       this.initialized = true;
-      this.$set(this, "gauth", gauth);
-    },
-    signIn() {
-      if (this.initialized) {
-        return this.gauth.isSignedIn.get();
+      if ("isSignedIn" in gauth) {
+        this.$set(this, "gauth", gauth);
       }
-      return false;
-    },
-    settings() {
-      if (
-        typeof this.$refs === "undefined" ||
-        typeof this.$refs.home === "undefined"
-      ) {
-        return {
-          url: "",
-          SS_ID: "",
-          data: "",
-          index: "",
-          indent: "",
-        };
-      }
-      return this.$refs.home.settings;
     },
   },
 };

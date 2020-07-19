@@ -1,5 +1,6 @@
 <template>
-  <ion-button size="small" @click="auth()">Authorize</ion-button>
+  <!-- reviewed 2020/07/19 -->
+  <ion-button fill="outline" color="danger" @click="auth()">Log in</ion-button>
 </template>
 <script>
 import "@codetrix-studio/capacitor-google-auth";
@@ -12,6 +13,7 @@ export default {
   },
   methods: {
     auth() {
+      // Todo: モバイルログイン実装の確認
       if (this.cap) {
         var update = false;
         var code = localStorage.getItem("code");

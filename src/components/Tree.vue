@@ -1,34 +1,40 @@
 <template>
+  <!-- reviewed: 2020/07/19 -->
   <div class="tree">
-    <details v-if="Object.keys(children).length > 0" @click="bold($event)">
-      <summary :content="content" v-on:click.self>
-        {{ content }}
-        <ion-note
-          v-if="Object.keys(children).length > 1"
-          >{{ Object.keys(children).length - 1 }}</ion-note
-        >
-        <slot></slot>
-      </summary>
+    <transition>
+      <details
+        v-if="Object.keys(children).length > 0"
+      >
+        <transition>
+          <summary @click.self.stop="emitOpen($event)">
+            {{ content }}
+            <ion-note v-if="Object.keys(children).length > 1">{{
+              Object.keys(children).length - 1
+            }}</ion-note>
+            <slot></slot>
+          </summary>
+        </transition>
 
-      <ion-item lines="full">
-        <ion-label>読書メモ</ion-label>
-        <ion-textarea
-          :value="children.comment"
-          auto-grow
-          @ionFocus="focus()"
-          @ionChange="changeComments()"
-          @ionBlur="blur()"
-          :id="content + Object.keys(children).length"
-        ></ion-textarea>
-      </ion-item>
-      <tree
-        v-for="(child, name) in chosenChildren()"
-        :key="name + Object.keys(child).length"
-        :content="name"
-        :children="child"
-      />
-    </details>
-    <p v-else>{{ content }}</p>
+        <ion-item lines="full" :style="{ height: height + 'px' }">
+          <ion-label>読書メモ</ion-label>
+          <ion-textarea
+            :value="children.comment"
+            auto-grow
+            @ionFocus="focus()"
+            @ionChange="changeComments($event)"
+            @ionBlur="blur()"
+            :id="content + Object.keys(children).length"
+          ></ion-textarea>
+        </ion-item>
+        <tree
+          v-for="(child, name) in chosenChildren"
+          :key="name + Object.keys(child).length"
+          :content="name"
+          :children="child"
+        />
+      </details>
+    </transition>
+    <!-- <p v-else>{{ content }}</p> -->
   </div>
 </template>
 
@@ -46,7 +52,13 @@ export default {
       required: true,
     },
   },
-  methods: {
+  data() {
+    return {
+      height: 59,
+      close: true,
+    };
+  },
+  computed: {
     chosenChildren() {
       const list = Object.keys(this.children);
       let result = new Object();
@@ -57,29 +69,60 @@ export default {
           result[list[index]] = this.children[list[index]];
         }
       }
+      if(this.close){
+        return {}
+      }
       return result;
-    },
+    }
+  },
+  methods: {
 
-    changeComments() {
+    changeComments(event) {
       // var comment = this.$refs[this.content + Object.keys(this.children).length]
       //   .value;
       // this.$set(this.children, "comment", comment);
-      var id = this.content + Object.keys(this.children).length;
-      var comment = document.getElementById(id).value;
+      // var id = this.content + Object.keys(this.children).length;
+      // var el = document.getElementById(id)
+      var comment = event.target.value;
       this.children.comment = comment;
+      this.height = event.target.scrollHeight;
 
       console.log("Comments changed: " + comment);
     },
     focus() {
+      if (this.height < 59) {
+        this.height = 59;
+      }
       console.group();
     },
     blur() {
       console.groupEnd();
     },
-    bold(event) {
-      Array.from(event.target.childNodes).filter(
-        (x) => x.tagName === "SUMMARY"
-      )[0].class += "open";
+    emitOpen(event) {
+      console.log(event.target.parentNode.parentNode.classList);
+      this.close = event.target.parentNode.open;
+      var text = Array.from(event.target.parentNode.parentNode.classList);
+      if (text.length > 2) {
+        text[1] = text.slice(1).join(" ");
+      }
+      console.log(text);
+      var arr = [
+        this.close,
+        // JSON.parse(JSON.stringify(text)),
+        text,
+        event.target.parentNode.parentNode.parentNode.tagName,
+      ];
+      this.$emit("open", arr);
+
+      var id = this.content + Object.keys(this.children).length;
+      var element = document.getElementById(id);
+      if (element.childNodes[0].scrollHeight > 59) {
+        this.height = element.childNodes[0].scrollHeight;
+        element.style.height = element.childNodes[0].scrollHeight;
+        element.childNodes[0].style.height = element.childNodes[0].scrollHeight;
+      } else {
+        element.childNodes[0].style.height = this.height + "px";
+      }
     },
   },
 };
@@ -107,7 +150,7 @@ ion-item {
 
 ion-textarea {
   font-size: 16px;
-  height: 55px;
+  margin-bottom: 20px;
 }
 summary::-webkit-details-marker {
   display: none;

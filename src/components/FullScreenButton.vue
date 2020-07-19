@@ -1,4 +1,5 @@
 <template>
+  <!-- Reviewed: 2020/07/19 -->
   <ion-button @click="fullscreen()">fullscreen</ion-button>
 </template>
 

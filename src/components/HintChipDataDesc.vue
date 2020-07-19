@@ -1,4 +1,5 @@
 <template>
+  <!-- Reviewed: 2020/07/20 -->
   <ion-card>
     <ion-card-header>
       <ion-card-title>データシート名</ion-card-title>

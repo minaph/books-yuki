@@ -1,29 +1,48 @@
 <template>
+  <!-- Reviewed : 2020/07/19 -->
   <div class="home">
     <SpreadSheet
       v-bind="ss"
-      @send="ss.send=false"
+      @send="ss.send = false"
       @get="ssActions.get"
       @set="ssActions.set"
       @error="handler"
     />
-    <loading :load="load" :text="loadingText" @present="load=false" />
+    <loading :load="load" :text="loadingText" @present="load = false" />
     <div>
-      <EditModalButton :titles="titles" :indexes="indexes" :indent="settings.indent"/>
-      <ion-button @click="updateFlag = true">{{buttonLabel}}</ion-button>
+      <ion-toolbar color="light">
+        <ion-buttons>
+          <EditModalButton
+            :titles="titles"
+            :indexes="indexes"
+            :indent="settings.indent"
+          />
+          <!-- Todo: コンポーネント化 -->
+          <ion-button @click="updateFlag = true" fill="clear">{{
+            buttonLabel
+          }}</ion-button>
+          <!-- コンポーネント化ここまで -->
+          <SelectButton title="モード選択" :choices="choices" />
+        </ion-buttons>
+      </ion-toolbar>
       <br />
       <!-- <span ref="error"></span> -->
       <DebugSpan :text="errorText" :debug="settings.debug" />
+      <!-- Todo: reorder分離 -->
       <ion-reorder-group @ionItemReorder="doReorder($event)" disabled="false">
         <tree
           v-for="name in titles"
           :key="name + Object.keys(indexes[name]).length"
+          :class="name"
           :content="name"
           :children="indexes[name]"
+          @open.self="updateTarget"
+          v-show="target[0] || target[1].includes(name)"
         >
           <ion-reorder v-on:click.prevent />
         </tree>
       </ion-reorder-group>
+      <!-- Reorder分離ここまで -->
     </div>
   </div>
 </template>
@@ -42,7 +61,6 @@ function A1(n, start = "A") {
   }
   return result;
 }
-
 
 function arrayMaker(o, indent, spaces = "") {
   var list = Object.keys(o);
@@ -81,15 +99,17 @@ var intro = `このイントロダクションは、初期設定が終わって�
 　目次タイトル右側のアイコンをドラッグすることで、順番を変更できます。
 　あなたのデータは（下書きを除いて）あなたの登録したスプレッドシートに保管されています。
 　製作予定の機能
-　　目次をGoogle todoリストに登録する機能。`.split("\n")
+　　目次をGoogle todoリストに登録する機能。`.split("\n");
 
 // import Tree from "./Tree.vue";
 import Tree from "../components/Tree";
 import loading from "../components/loading.vue";
 import SpreadSheet from "../components/SpreadSheet.vue";
-import EditModalButton from "./EditModalButton"
-import DebugSpan from "../components/DebugSpan"
-import textParser from "../components/parser.js"
+import EditModalButton from "./EditModalButton";
+import DebugSpan from "../components/DebugSpan";
+import textParser from "../components/parser.js";
+import SelectButton from "../components/SelectButton";
+
 export default {
   name: "Home",
   components: {
@@ -97,27 +117,23 @@ export default {
     loading,
     SpreadSheet,
     EditModalButton,
-    DebugSpan
+    DebugSpan,
+    SelectButton,
   },
   props: {
     signIn: {
-      default: false
-    }
+      default: false,
+    },
+    settings: Object,
   },
   data() {
     return {
-      isBeginner: true,
+      mode: "",
+      target: [true, {}],
       editIndexText: false,
       titles: new Array(),
       indexes: new Object(),
-      settings: {
-        SS_ID: window.localStorage.getItem("SS_ID"),
-        indent: window.localStorage.getItem("indent"),
-        url: window.localStorage.getItem("url"),
-        index: window.localStorage.getItem("index"),
-        data: window.localStorage.getItem("data"),
-        debug: false
-      },
+      
       updateFlag: false,
       load: false,
       loadingText: "目次データをロードしています",
@@ -126,14 +142,14 @@ export default {
         params: {},
         values: [],
         majorDimension: "",
-        send: false
+        send: false,
       },
       ssActions: {
         get: () => {},
-        set: () => {}
+        set: () => {},
       },
       buttonLabel: "保存",
-      errorText: ""
+      errorText: "",
     };
   },
   computed: {
@@ -147,32 +163,39 @@ export default {
         values.push(arr);
       }
       return values;
-    }
+    },
+    choices: () => ["デフォルト", "削除モード", "Todoリストに共有", "並び替え"],
+    isBeginner() {
+      var vm = this;
+      return !Object.keys(this.settings).reduce(function(a, b) {
+        return a && ["string", "boolean"].includes(typeof vm.settings[b]);
+      });
+    },
   },
   created() {
-    window.addEventListener("beforeunload", event => {
+    // Todo: 別コンポーネント化
+    window.addEventListener("beforeunload", (event) => {
       // Cancel the event as stated by the standard.
       event.preventDefault();
       // Chrome requires returnValue to be set.
       event.returnValue =
         "保存されていないデータは消去されます。よろしいですか？";
     });
+    // コンポーネント分離ここまで
     // console.log = this.handler
   },
   watch: {
     signIn: {
       handler: function(val, old) {
         var vm = this;
-        this.isBeginner = !Object.keys(this.settings).reduce(function(a, b) {
-          return a && ["string","boolean"].includes(typeof vm.settings[b]);
-        });
+
         if (val && !this.isBeginner) {
           this.load = true;
           this.ss.method = "get";
           this.ss.params = {
             spreadsheetId: this.settings.SS_ID,
             range: "'" + this.settings.index + "'!" + "A:A",
-            majorDimension: "COLUMNS"
+            majorDimension: "COLUMNS",
             // valueRenderOption: "",
           };
           this.ssActions.get = function(data) {
@@ -187,9 +210,13 @@ export default {
           };
           // this.request = requestObject("get", params, f);
           this.ss.send = true;
-        }else{
-          this.$set(this.titles, 0, "サイトの使い方（ここをクリック！）")
-          this.$set(this.indexes, "サイトの使い方（ここをクリック！）", textParser(intro, "　"))
+        } else {
+          this.$set(this.titles, 0, "サイトの使い方（ここをクリック！）");
+          this.$set(
+            this.indexes,
+            "サイトの使い方（ここをクリック！）",
+            textParser(intro, "　")
+          );
         }
 
         function parseData(data) {
@@ -206,9 +233,8 @@ export default {
           console.log("loadIndexes");
           vm.ss.params = {
             spreadsheetId: vm.settings.SS_ID,
-            range:
-              "'" + vm.settings.data + "'!" + "A:" + A1(vm.titles.length - 1),
-            majorDimension: "COLUMNS"
+            range: "'" + vm.settings.data + "'!" + "A:" + A1(vm.titles.length),
+            majorDimension: "COLUMNS",
             // valueRenderOption: "",
           };
           vm.ssActions.get = function f(data) {
@@ -234,7 +260,7 @@ export default {
           vm.ss.method = "get";
           vm.ss.params = {
             spreadsheetId: vm.settings.SS_ID,
-            range: "'" + vm.settings.data + "'!" + "1:1"
+            range: "'" + vm.settings.data + "'!" + "1:1",
             // valueRenderOption: "",
           };
           vm.ssActions.get = function(data) {
@@ -252,7 +278,7 @@ export default {
           vm.ss.send = true;
         }
       },
-      immediate: true
+      immediate: true,
     },
     // request: {
 
@@ -271,12 +297,8 @@ export default {
           this.ss.params = {
             spreadsheetId: this.settings.SS_ID,
             range:
-              "'" +
-              this.settings.data +
-              "'!" +
-              "A:" +
-              A1(this.titles.length - 1),
-            valueInputOption: "RAW"
+              "'" + this.settings.data + "'!" + "A:" + A1(this.titles.length),
+            valueInputOption: "RAW",
           };
           this.ss.values = this.valuesArray;
           console.log(this.ss.values);
@@ -290,7 +312,7 @@ export default {
             vm.ss.params = {
               spreadsheetId: vm.settings.SS_ID,
               range: "'" + vm.settings.index + "'!" + "A:A",
-              valueInputOption: "RAW"
+              valueInputOption: "RAW",
             };
             vm.ss.values = [vm.titles];
             console.log(vm.ss.values);
@@ -303,8 +325,8 @@ export default {
           }
         }
       },
-      immediate: false
-    }
+      immediate: false,
+    },
   },
   methods: {
     doReorder(event) {
@@ -317,14 +339,38 @@ export default {
     },
     handler(error) {
       this.$ionic.loadingController.dismiss();
-      this.errorText += "Error! "+error.result.error.message
-    }
+      this.errorText += "Error! " + error.result.error.message;
+    },
+    // report(ev) {
+    //   console.log("report");
+    //   console.log(ev);
+    //   console.log(ev.target.parentNode.open);
+    //   console.log(
+    //     !ev.target.parentNode.open && ev.target.parentNode.parentNode
+    //   );
+    //   this.target =
+    //     !ev.target.parentNode.open && ev.target.parentNode.parentNode;
+    // },
+    showTree(name) {
+      // console.log("report2");
+      console.log(this.target);
+      // if (this.target) {
+      //   return this.target.open || this.t.includes(name);
+      // }
+      return true;
+    },
+    updateTarget(arr) {
+      console.log(arr);
+      if (arr[2] === "ION-REORDER-GROUP") {
+        this.target = arr;
+      }
+    },
   },
   beforeDestroy() {
     if (confirm("作業内容を保存しますか？")) {
       this.updateFlag = true;
     }
-  }
+  },
 };
 </script>
 

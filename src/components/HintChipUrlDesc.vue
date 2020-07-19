@@ -1,4 +1,5 @@
 <template>
+  <!-- Reviewed: 2020/07/20 -->
   <ion-card>
     <ion-card-header>
       <ion-card-title>SpreadSheet URL</ion-card-title>
@@ -18,9 +19,6 @@
 <script>
 export default {
   name: "DataDesc"
-  // props: {
-  //   text: String
-  // }
 };
 </script>
 

@@ -1,4 +1,5 @@
 <template>
+  <!-- Reviewed: 2020/07/20 -->
   <ion-button @click="openModal">設定</ion-button>
 </template>
 

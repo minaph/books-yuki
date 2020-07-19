@@ -16,7 +16,7 @@ export default {
     initParams: () => ({
       apiKey: process.env.VUE_APP_API_KEY,
       clientId:
-        "186767635929-88v3ukn6ci5f6sego30acvio50d67l2i.apps.googleusercontent.com",
+        "186767635929-av1db7kbettcvsq1309m9joijgot0tab.apps.googleusercontent.com",
       discoveryDocs: [
         "https://sheets.googleapis.com/$discovery/rest?version=v4",
       ],
@@ -39,8 +39,12 @@ export default {
         gapiScript.onload();
       }
     };
-
     document.head.appendChild(gapiScript);
+
+    let meta = document.createElement("meta");
+    meta.setAttribute("name", "google-signin-client_id");
+    meta.setAttribute("content", this.initParams.clientId);
+    document.head.appendChild(meta);
 
     function initClient() {
       console.log("initClient");
@@ -49,6 +53,7 @@ export default {
           if (vm.cap) {
             var code = localStorage.getItem("code");
             if (code !== null && code !== "null") {
+              // Token refresh 自動検出
               gapi.client.setToken({
                 access_token: code,
               });

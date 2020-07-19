@@ -1,4 +1,5 @@
 <template functional>
+  <!-- Reviewed: 2020/07/20 -->
   <div style="display: none;">{{$options.presentLoading(props, listeners)}}</div>
 </template>
 <script>

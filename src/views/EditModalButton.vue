@@ -1,5 +1,8 @@
 <template>
-  <ion-button @click="registerButton[1]()">{{registerButton[0]}}</ion-button>
+  <!-- Reviewed: 2020/07/19 -->
+  <ion-button fill="clear" @click="registerButton[1]()">{{
+    registerButton[0]
+  }}</ion-button>
 </template>
 
 <script>
@@ -10,11 +13,11 @@ export default {
   props: {
     indent: String,
     titles: Array,
-    indexes: Object
+    indexes: Object,
   },
   data() {
     return {
-      title: [localStorage.getItem("title")]
+      title: [localStorage.getItem("title")],
     };
   },
   computed: {
@@ -24,7 +27,11 @@ export default {
       if (vm.title[0] === null) {
         ans["本を登録する"] = function() {
           vm.$set(vm.title, 0, prompt("書の題名"));
-          if (typeof vm.title[0] !== "undefined"&& vm.title[0] !== null && vm.title[0] !== "") {
+          if (
+            typeof vm.title[0] !== "undefined" &&
+            vm.title[0] !== null &&
+            vm.title[0] !== ""
+          ) {
             localStorage.setItem("title", vm.title[0]);
           } else {
             console.info("タイトルが無効です。");
@@ -34,7 +41,7 @@ export default {
         ans[vm.title[0]] = this.openModal;
       }
       return Object.entries(ans)[0];
-    }
+    },
   },
   methods: {
     openModal() {
@@ -46,16 +53,14 @@ export default {
               indent: this.indent,
               titles: this.titles,
               indexes: this.indexes,
-              title: this.title
-            }
-          }
+              title: this.title,
+            },
+          },
         })
-        .then(m => m.present());
-    }
-  }
+        .then((m) => m.present());
+    },
+  },
 };
 </script>
 
-<style>
-</style>
-
+<style></style>

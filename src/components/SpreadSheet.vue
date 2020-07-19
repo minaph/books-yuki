@@ -1,4 +1,5 @@
 <template functional>
+  <!-- Reviewed: 2020/07/19 -->
   <div style="display: none;">{{$options.handler(props, listeners)}}</div>
 </template>
 <script>

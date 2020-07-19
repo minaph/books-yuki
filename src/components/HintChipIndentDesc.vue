@@ -1,6 +1,6 @@
 <template>
+  <!-- Reviewed: 2020/07/20 -->
   <ion-card>
-    <!-- {{text}} -->
     <ion-card-header>
       <ion-card-title>インデント文字</ion-card-title>
     </ion-card-header>

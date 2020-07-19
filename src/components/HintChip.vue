@@ -1,16 +1,17 @@
-<template><div>
-  <ion-chip @click="descriptionPopover" outline>?</ion-chip>
+<template>
+  <!-- Reviewed: 2020/07/19 -->
+  <div>
+    <ion-chip @click="descriptionPopover" outline>?</ion-chip>
   </div>
 </template>
 
 <script>
-
 export default {
   name: "HintChip",
   props: {
-    description: Object
+    description: Object,
   },
-  methods:{
+  methods: {
     descriptionPopover() {
       const popover = this.$ionic.popoverController
         .create({
@@ -20,15 +21,15 @@ export default {
             //   which: target,
             // }
           },
-          translucent: true
+          translucent: true,
         })
-        .then(m => m.present());
+        .then((m) => m.present());
       // document.body.appendChild(popover);
       // console.log(Popover);
       // return popover.present();
-    }
-  }
-}
+    },
+  },
+};
 </script>
 
 <style scoped>
