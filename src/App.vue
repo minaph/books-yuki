@@ -1,29 +1,33 @@
 <template>
   <!-- done -->
-  <ion-app>
+  <Home :signIn="signIn" :settings="settings">
     <vue-gapi @initGapi="startMonitoring" :cap="cap" />
-    <!--　Todo: ここからHomeへ -->
-    <ion-toolbar> 
+
+    <ion-toolbar>
       <ion-title>books</ion-title>
       <ion-buttons slot="end">
         <login-button
           v-show="initialized && !signIn"
           :gauth="gauth"
           :cap="cap"
+          @set-token="token"
         />
         <FullScreenButton />
         <SettingModalButton :settings="settings" :gauth="gauth" :cap="cap" />
       </ion-buttons>
     </ion-toolbar>
-
-    <ion-content>
-      <Home :signIn="signIn" :settings="settings" />
-    </ion-content>
-    <!-- ここまで -->
-  </ion-app>
+  </Home>
 </template>
 
 <script>
+function localGet(x) {
+  var r = localStorage.getItem(x);
+  if (r === "null") {
+    return "";
+  }
+  return r;
+}
+
 require("dotenv").config();
 import Home from "./views/Home.vue";
 import loginButton from "./components/loginButton";
@@ -50,11 +54,11 @@ export default {
         },
       },
       settings: {
-        SS_ID: window.localStorage.getItem("SS_ID"),
-        indent: window.localStorage.getItem("indent"),
-        url: window.localStorage.getItem("url"),
-        index: window.localStorage.getItem("index"),
-        data: window.localStorage.getItem("data"),
+        SS_ID: localGet("SS_ID"),
+        indent: localGet("indent"),
+        url: localGet("url"),
+        index: localGet("index"),
+        data: localGet("data"),
         debug: false,
       },
     };
@@ -77,6 +81,13 @@ export default {
       if ("isSignedIn" in gauth) {
         this.$set(this, "gauth", gauth);
       }
+    },
+    token() {
+      this.$set(this.gauth.isSignedIn, "get", () => true);
+      setTimeout(
+        () => this.$set(this.gauth.isSignedIn, "get", () => false),
+        3600 * 1000
+      );
     },
   },
 };

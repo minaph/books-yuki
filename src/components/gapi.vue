@@ -50,6 +50,8 @@ export default {
       console.log("initClient");
       gapi.client.init(vm.initParams).then(
         function() {
+          var authObj = gapi.auth2.getAuthInstance();
+
           if (vm.cap) {
             var code = localStorage.getItem("code");
             if (code !== null && code !== "null") {
@@ -58,8 +60,23 @@ export default {
                 access_token: code,
               });
             }
+            authObj.request = function(authCode) {
+              return gapi.client.request({
+                path: "https://www.googleapis.com/oauth2/v4/token",
+                method: "POST",
+                params: {
+                  client_id: vm.initParams.client_id,
+                  client_secret: process.env.VUE_APP_CLIENT_SECRET,
+                  grant_type: "authorization_code",
+                  code: authCode,
+                },
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+                },
+              });
+            };
           }
-          vm.$emit("initGapi", gapi.auth2.getAuthInstance());
+          vm.$emit("initGapi", authObj);
         },
         function(error) {
           console.error(JSON.stringify(error, null, 2));

@@ -122,7 +122,7 @@ export default {
     },
     logout() {
       if (this.cap) {
-        Plugins.GoogleAuth.signOut()
+        Plugins.GoogleAuth.signOut();
       } else {
         this.gauth.signOut();
       }

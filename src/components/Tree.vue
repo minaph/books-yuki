@@ -2,9 +2,7 @@
   <!-- reviewed: 2020/07/19 -->
   <div class="tree">
     <transition>
-      <details
-        v-if="Object.keys(children).length > 0"
-      >
+      <details v-if="Object.keys(children).length > 0">
         <transition>
           <summary @click.self.stop="emitOpen($event)">
             {{ content }}
@@ -15,17 +13,7 @@
           </summary>
         </transition>
 
-        <ion-item lines="full" :style="{ height: height + 'px' }">
-          <ion-label>読書メモ</ion-label>
-          <ion-textarea
-            :value="children.comment"
-            auto-grow
-            @ionFocus="focus()"
-            @ionChange="changeComments($event)"
-            @ionBlur="blur()"
-            :id="content + Object.keys(children).length"
-          ></ion-textarea>
-        </ion-item>
+        <FlexInput :comment="children.comment" @edited="handleMemo" />
         <tree
           v-for="(child, name) in chosenChildren"
           :key="name + Object.keys(child).length"
@@ -40,8 +28,12 @@
 
 <script>
 import Tree from "./TreeF.vue";
+import FlexInput from "./FlexInput"
 export default {
   name: "Tree",
+  components: {
+    FlexInput
+  },
   props: {
     content: {
       types: String,
@@ -54,12 +46,14 @@ export default {
   },
   data() {
     return {
-      height: 59,
       close: true,
     };
   },
   computed: {
     chosenChildren() {
+      if (!this.children) {
+        console.log(this.children);
+      }
       const list = Object.keys(this.children);
       let result = new Object();
       // 依存関係を維持するため、for文で処理
@@ -69,35 +63,18 @@ export default {
           result[list[index]] = this.children[list[index]];
         }
       }
-      if(this.close){
-        return {}
+      if (this.close) {
+        return {};
       }
       return result;
-    }
+    },
+  },
+  mounted() {
+    console.assert(this.children, "children warning");
+    // if(!this.children){
+    // }
   },
   methods: {
-
-    changeComments(event) {
-      // var comment = this.$refs[this.content + Object.keys(this.children).length]
-      //   .value;
-      // this.$set(this.children, "comment", comment);
-      // var id = this.content + Object.keys(this.children).length;
-      // var el = document.getElementById(id)
-      var comment = event.target.value;
-      this.children.comment = comment;
-      this.height = event.target.scrollHeight;
-
-      console.log("Comments changed: " + comment);
-    },
-    focus() {
-      if (this.height < 59) {
-        this.height = 59;
-      }
-      console.group();
-    },
-    blur() {
-      console.groupEnd();
-    },
     emitOpen(event) {
       console.log(event.target.parentNode.parentNode.classList);
       this.close = event.target.parentNode.open;
@@ -114,16 +91,10 @@ export default {
       ];
       this.$emit("open", arr);
 
-      var id = this.content + Object.keys(this.children).length;
-      var element = document.getElementById(id);
-      if (element.childNodes[0].scrollHeight > 59) {
-        this.height = element.childNodes[0].scrollHeight;
-        element.style.height = element.childNodes[0].scrollHeight;
-        element.childNodes[0].style.height = element.childNodes[0].scrollHeight;
-      } else {
-        element.childNodes[0].style.height = this.height + "px";
-      }
     },
+    handleMemo(comment){
+      this.$set(this.children, "comment", comment);
+    }
   },
 };
 </script>
@@ -146,12 +117,14 @@ details details {
 
 ion-item {
   margin-left: 20px;
+  --highlight-color-focused: var(--ion-color-light-contrast);
 }
 
 ion-textarea {
   font-size: 16px;
   margin-bottom: 20px;
 }
+
 summary::-webkit-details-marker {
   display: none;
 }
@@ -162,7 +135,15 @@ summary#text {
 
 details[open] > summary {
   font-weight: bold;
+  font-size: 22px;
 }
+
+details[open] details[open] summary {
+  font-size: 17px;
+  margin-block-start: 3px;
+  margin-block-end: 3px;
+}
+
 details[open] > summary > ion-note {
   font-weight: normal;
 }

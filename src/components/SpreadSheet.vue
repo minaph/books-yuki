@@ -1,62 +1,71 @@
-<template functional>
-  <!-- Reviewed: 2020/07/19 -->
-  <div style="display: none;">{{$options.handler(props, listeners)}}</div>
-</template>
+<template></template>
+<!-- Reviewed: 2020/07/19 -->
+<!-- <div style="display: none;">{{$options.handler(props, listeners)}}</div> -->
+
 <script>
 export default {
   name: "SpreadSheet",
   props: {
-    method: String,
-    params: Object,
-    values: Array,
-    majorDimension: String,
-    send: Boolean
+    requests: Array,
   },
-  handler(props, listeners) {
-    if (!props.send) {
-      return;
-    }
-    listeners.send(false);
-    let request;
-    switch (props.method) {
-      case "get":
-        request = gapi.client.sheets.spreadsheets.values.get(props.params);
-        request.then(
-          function(response) {
-            // debugger;
-            console.log(response);
-            listeners.get(response.result.values || response);
-          },
-          function(reason) {
-            listeners.error(reason);
-            console.error("error: " + reason.result.error.message);
-          }
-        );
-        break;
-      case "set":
-        var valueRangeBody = {
-          range: props.params["range"],
-          values: props.values,
-          majorDimension: props.majorDimension
-        };
-        request = gapi.client.sheets.spreadsheets.values.update(
-          props.params,
-          valueRangeBody
-        );
-        request.then(
-          function(response) {
-            listeners.set(response);
-            console.log(response.result);
-          },
-          function(reason) {
-            listeners.error(reason);
-            console.error("error: " + reason.result.error.message);
-          }
-        );
-        break;
-      default:
-        break;
-    }
-  }
+  data() {
+    return {};
+  },
+  watch: {
+    requests: {
+      handler: function() {
+        console.log("Detected");
+        this.requests.filter((x) => x.send).forEach(this.handler);
+      },
+      deep: true,
+    },
+  },
+  methods: {
+    handler(r) {
+      this.$set(r, "send", false);
+      // r.send = false;
+      let request;
+      switch (r.method) {
+        case "get":
+          request = gapi.client.sheets.spreadsheets.values.get(r.params);
+          request.then(
+            function(response) {
+              // debugger;
+              console.log(response);
+              r.onsucceeded(response.result.values || response);
+            },
+            function(reason) {
+              r.onerror(reason);
+              console.error("error: " + reason.result.error.message);
+            }
+          );
+          break;
+        case "set":
+          var valueRangeBody = {
+            range: r.params["range"],
+            values: r.values,
+            majorDimension: r.majorDimension,
+          };
+          request = gapi.client.sheets.spreadsheets.values.update(
+            r.params,
+            valueRangeBody
+          );
+          request.then(
+            function(response) {
+              console.log("done!");
+              r.onsucceeded(response);
+              console.log(response.result);
+            },
+            function(reason) {
+              r.onerror(reason);
+              console.error("error: " + reason.result.error.message);
+            }
+          );
+          break;
+        default:
+          break;
+      }
+    },
+  },
 };
 </script>

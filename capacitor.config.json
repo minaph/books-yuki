@@ -9,7 +9,11 @@
       "launchShowDuration": 0
     },
     "GoogleAuth": {
-      "scopes": ["profile", "email", "https://www.googleapis.com/auth/spreadsheets"],
+      "scopes": [
+        "profile",
+        "email",
+        "https://www.googleapis.com/auth/spreadsheets"
+      ],
       "serverClientId": "186767635929-av1db7kbettcvsq1309m9joijgot0tab.apps.googleusercontent.com"
     }
   },

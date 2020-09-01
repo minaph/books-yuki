@@ -1,15 +1,23 @@
 <template>
-<!-- done -->
+  <!-- done -->
   <div class="debug">
-    <span ref="error" v-show="errorText.length > 0">
-      {{ errorText }}
-      <ion-chip color="dark" mode="ios" outline="true" @click="errorText = ''">
+    <span ref="error" v-for="(e, i) in errors" :key="Math.random()">
+      <p>{{ e }}</p>
+      <ion-chip
+        color="dark"
+        mode="ios"
+        outline="true"
+        @click="errors.splice(i, 1)"
+      >
         <ion-label>X</ion-label>
       </ion-chip>
     </span>
-    <!-- Todo: リスト化 -->
-    <span ref="debug" v-show="debug">{{ debugText }}</span>
-    <!-- リスト化ここまで -->
+    <details v-show="debug">
+      <summary>ログ</summary>
+      <span v-for="d in debugLines" :key="Math.random()">
+        <p>{{ d }}</p>
+      </span>
+    </details>
   </div>
 </template>
 
@@ -22,13 +30,14 @@ export default {
   },
   data() {
     return {
-      debugText: "",
-      errorText: "",
+      debugLines: [],
+      errors: [],
     };
   },
+  conputed: {},
   watch: {
     text() {
-      this.errorText = this.text;
+      this.errors.push(this.text);
     },
   },
   created() {
@@ -42,8 +51,17 @@ export default {
     var vm = this;
     function f(g) {
       return function(...m) {
-        g(...m);
-        vm.handler(...m);
+        try {
+          if (m.length > 0) {
+            g(...m);
+            vm.handler(...m);
+          } else {
+            g(m);
+            vm.handler(m);
+          }
+        } catch (error) {
+          debugger;
+        }
       };
     }
     [
@@ -69,11 +87,15 @@ export default {
         };
         var text;
         try {
-          text = JSON.stringify(e, replacer) + "           ";
+          try {
+            text = JSON.stringify(e, replacer);
+          } catch (error) {
+            text = e + "";
+          } finally {
+            this.debugLines.splice(0, 0, text);
+          }
         } catch (error) {
-          text = e + "";
-        } finally {
-          this.debugText += text;
+          debugger;
         }
       });
     },

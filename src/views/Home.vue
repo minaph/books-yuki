@@ -1,15 +1,16 @@
 <template>
   <!-- Reviewed : 2020/07/19 -->
-  <div class="home">
+  <ion-app>
+    <link
+      href="https://fonts.googleapis.com/css?family=Sawarabi+Mincho"
+      rel="stylesheet"
+    />
     <SpreadSheet
-      v-bind="ss"
-      @send="ss.send = false"
-      @get="ssActions.get"
-      @set="ssActions.set"
-      @error="handler"
+      :requests="[titlesLoadRequest, indexesInitRequest, indexesLoadRequest]"
     />
     <loading :load="load" :text="loadingText" @present="load = false" />
-    <div>
+    <ion-header>
+      <slot></slot>
       <ion-toolbar color="light">
         <ion-buttons>
           <EditModalButton
@@ -17,34 +18,32 @@
             :indexes="indexes"
             :indent="settings.indent"
           />
-          <!-- Todo: コンポーネント化 -->
-          <ion-button @click="updateFlag = true" fill="clear">{{
-            buttonLabel
-          }}</ion-button>
-          <!-- コンポーネント化ここまで -->
-          <SelectButton title="モード選択" :choices="choices" />
-        </ion-buttons>
-      </ion-toolbar>
-      <br />
-      <!-- <span ref="error"></span> -->
+          <SaveButton
+            :settings="settings"
+            @error="handler"
+            :requests="[titlesSaveRequest, indexesSaveRequest]"
+          />
+          <SelectButton
+            title="モード選択"
+            :choices="choices"
+            @change="modeChange"
+          />
+        </ion-buttons> </ion-toolbar
+    ></ion-header>
+    <ion-content>
       <DebugSpan :text="errorText" :debug="settings.debug" />
-      <!-- Todo: reorder分離 -->
-      <ion-reorder-group @ionItemReorder="doReorder($event)" disabled="false">
-        <tree
-          v-for="name in titles"
-          :key="name + Object.keys(indexes[name]).length"
-          :class="name"
-          :content="name"
-          :children="indexes[name]"
-          @open.self="updateTarget"
-          v-show="target[0] || target[1].includes(name)"
-        >
-          <ion-reorder v-on:click.prevent />
-        </tree>
-      </ion-reorder-group>
-      <!-- Reorder分離ここまで -->
-    </div>
-  </div>
+      <tree
+        v-for="name in titleNames"
+        :key="name + Object.keys(titleNames).length"
+        :class="name"
+        :content="name"
+        :children="indexes[name]"
+        @open.self="updateTarget"
+        v-show="target[0] || target[1].includes(name)"
+      >
+      </tree>
+    </ion-content>
+  </ion-app>
 </template>
 
 <script>
@@ -109,6 +108,8 @@ import EditModalButton from "./EditModalButton";
 import DebugSpan from "../components/DebugSpan";
 import textParser from "../components/parser.js";
 import SelectButton from "../components/SelectButton";
+import SaveButton from "../components/SaveButton";
+import ReorderMode from "../components/ReorderMode";
 
 export default {
   name: "Home",
@@ -119,6 +120,8 @@ export default {
     EditModalButton,
     DebugSpan,
     SelectButton,
+    SaveButton,
+    ReorderMode
   },
   props: {
     signIn: {
@@ -128,25 +131,19 @@ export default {
   },
   data() {
     return {
-      mode: "",
+      mode: "デフォルト",
       target: [true, {}],
       editIndexText: false,
       titles: new Array(),
       indexes: new Object(),
-      
-      updateFlag: false,
       load: false,
       loadingText: "目次データをロードしています",
-      ss: {
-        method: "",
-        params: {},
-        values: [],
-        majorDimension: "",
-        send: false,
-      },
-      ssActions: {
-        get: () => {},
-        set: () => {},
+      call: {
+        saveIndexes: false,
+        saveTitles: false,
+        loadIndexes: false,
+        loadTitles: false,
+        initIndexes: false,
       },
       buttonLabel: "保存",
       errorText: "",
@@ -164,12 +161,194 @@ export default {
       }
       return values;
     },
-    choices: () => ["デフォルト", "削除モード", "Todoリストに共有", "並び替え"],
+    choices: () => [
+      "デフォルト",
+      "削除モード",
+      "Todoリストに共有",
+      "並び替え",
+      "クイズモード",
+    ],
     isBeginner() {
-      var vm = this;
+      var settings = this.settings;
       return !Object.keys(this.settings).reduce(function(a, b) {
-        return a && ["string", "boolean"].includes(typeof vm.settings[b]);
+        return a && ["string", "boolean"].includes(typeof settings[b]);
       });
+    },
+    titleNames() {
+      if (Object.keys(this.indexes).length > 0) {
+        return this.titles;
+      }
+      return [];
+    },
+    titlesSaveRequest() {
+      // var vm = this;
+      var SS_ID = this.SS_ID;
+      var settings = this.settings;
+      var titles = this.titles;
+      var valuesArray = this.valuesArray;
+      var handler = this.handler;
+      var call = this.call;
+      return {
+        method: "set",
+        params: {
+          spreadsheetId: settings.SS_ID,
+          range: "'" + settings.data + "'!" + "A:" + A1(titles.length),
+          valueInputOption: "RAW",
+        },
+        values: valuesArray,
+        majorDimension: "COLUMNS",
+        onsucceeded: () => {
+          call.saveTitles = false;
+        },
+        onerror: handler,
+        send: call.saveTitles,
+      };
+    },
+    indexesSaveRequest() {
+      // var vm = this;
+      var SS_ID = this.SS_ID;
+      var settings = this.settings;
+      var titles = this.titles;
+      var handler = this.handler;
+      var call = this.call;
+      return {
+        method: "set",
+        params: {
+          spreadsheetId: settings.SS_ID,
+          range: "'" + settings.index + "'!" + "A:A",
+          valueInputOption: "RAW",
+        },
+        values: [titles],
+        majorDimension: "COLUMNS",
+        onsucceeded: () => {
+          call.saveIndexes = false;
+        },
+        onerror: handler,
+        send: call.saveIndexes,
+      };
+    },
+    titlesLoadRequest() {
+      // var vm = this;
+      var SS_ID = this.SS_ID;
+      var settings = this.settings;
+      var titles = this.titles;
+      var handler = this.handler;
+      var call = this.call;
+      var indexes = this.indexes;
+      var set = this.$set;
+      var del = this.$delete;
+      return {
+        method: "get",
+        params: {
+          spreadsheetId: settings.SS_ID,
+          range: "'" + settings.index + "'!" + "A:A",
+          majorDimension: "COLUMNS",
+          // valueRenderOption: "",
+        },
+        onsucceeded: function(data) {
+          console.log("got titles: " + JSON.stringify(data));
+          var nodata =
+            !Array.isArray(data) || data.length === 0 || data[0].length === 0;
+          if ("サイトの使い方（ここをクリック！）" in indexes) {
+            del(indexes, "サイトの使い方（ここをクリック！）");
+          }
+          if (nodata) {
+            set(call, "initIndexes", true);
+            // call.initIndexes = true;
+          } else {
+            // data[0].forEach(function(x) {
+            //   set(indexes, x, new Object());
+            // });
+            // set(vm, "titles", data[0]);
+            data[0].forEach(function(v, i) {
+              titles[i] = v;
+            });
+            set(call, "loadIndexes", true);
+            // call.loadIndexes = true;
+            set(call, "loadTitles", false);
+            // call.loadTitles = false;
+          }
+        },
+        onerror: handler,
+        send: call.loadTitles,
+      };
+    },
+    indexesInitRequest() {
+      // var vm = this;
+      var SS_ID = this.SS_ID;
+      var settings = this.settings;
+      var titles = this.titles;
+      var handler = this.handler;
+      var call = this.call;
+      var indexes = this.indexes;
+      var set = this.$set;
+      var ionic = this.$ionic;
+      return {
+        method: "get",
+        params: {
+          spreadsheetId: settings.SS_ID,
+          range: "'" + settings.data + "'!" + "1:1",
+          // valueRenderOption: "",
+        },
+        onsucceeded: function(data) {
+          var nodata =
+            !Array.isArray(data) || data.length === 0 || data[0].length === 0;
+          if (nodata) {
+            console.log("Your data is empty");
+            data = [[]];
+            ionic.loadingController.dismiss();
+          } else {
+            console.log("got titles: " + data[0]);
+
+            data[0].forEach(function(v, i) {
+              titles[i] = v;
+            });
+            set(call, "loadIndexes", true);
+            // call.loadIndexes = true;
+            set(call, "initIndexes", false);
+            // call.initIndexes = false;
+          }
+        },
+        onerror: handler,
+        send: call.initIndexes,
+      };
+    },
+    indexesLoadRequest() {
+      // var vm = this;
+      var SS_ID = this.SS_ID;
+      var settings = this.settings;
+      var titles = this.titles;
+      var handler = this.handler;
+      var call = this.call;
+      var indexes = this.indexes;
+      var set = this.$set;
+      var ionic = this.$ionic;
+      return {
+        method: "get",
+        params: {
+          spreadsheetId: settings.SS_ID,
+          range: "'" + settings.data + "'!" + "A:" + A1(titles.length),
+          majorDimension: "COLUMNS",
+        },
+        onsucceeded: function(data) {
+          for (var _i = 0; _i < data.length; _i++) {
+            set(
+              indexes,
+              data[_i][0],
+              textParser(data[_i].slice(1), settings.indent)
+            );
+          }
+          console.log("Indexing complete!");
+          console.log(indexes);
+          // console.log(dismiss)
+          // debugger;
+          ionic.loadingController.dismiss();
+          set(call, "loadIndexes", false);
+          // call.loadIndexes = false;
+        },
+        onerror: handler,
+        send: call.loadIndexes,
+      };
     },
   },
   created() {
@@ -191,25 +370,7 @@ export default {
 
         if (val && !this.isBeginner) {
           this.load = true;
-          this.ss.method = "get";
-          this.ss.params = {
-            spreadsheetId: this.settings.SS_ID,
-            range: "'" + this.settings.index + "'!" + "A:A",
-            majorDimension: "COLUMNS",
-            // valueRenderOption: "",
-          };
-          this.ssActions.get = function(data) {
-            console.log("got titles: " + JSON.stringify(data));
-            var nodata =
-              !Array.isArray(data) || data.length === 0 || data[0].length === 0;
-            if (nodata) {
-              initIndex(parseData);
-            } else {
-              parseData(data);
-            }
-          };
-          // this.request = requestObject("get", params, f);
-          this.ss.send = true;
+          this.call.loadTitles = true;
         } else {
           this.$set(this.titles, 0, "サイトの使い方（ここをクリック！）");
           this.$set(
@@ -217,65 +378,6 @@ export default {
             "サイトの使い方（ここをクリック！）",
             textParser(intro, "　")
           );
-        }
-
-        function parseData(data) {
-          // data = data.map(x=>x[0])
-          data[0].forEach(function(x) {
-            vm.$set(vm.indexes, x, new Object());
-          });
-          vm.$set(vm, "titles", data[0]);
-          loadIndexes();
-        }
-
-        function loadIndexes() {
-          // debugger;
-          console.log("loadIndexes");
-          vm.ss.params = {
-            spreadsheetId: vm.settings.SS_ID,
-            range: "'" + vm.settings.data + "'!" + "A:" + A1(vm.titles.length),
-            majorDimension: "COLUMNS",
-            // valueRenderOption: "",
-          };
-          vm.ssActions.get = function f(data) {
-            for (var _i = 0; _i < data.length; _i++) {
-              vm.$set(
-                vm.indexes,
-                data[_i][0],
-                textParser(data[_i].slice(1), vm.settings.indent)
-              );
-            }
-            console.log("Indexing complete!");
-            console.log(vm.indexes);
-            // console.log(dismiss)
-            // debugger;
-            vm.$ionic.loadingController.dismiss();
-          };
-          // vm.request = requestObject("get", params, f);
-          vm.ss.send = true;
-        }
-
-        function initIndex(f) {
-          console.log("No index data available");
-          vm.ss.method = "get";
-          vm.ss.params = {
-            spreadsheetId: vm.settings.SS_ID,
-            range: "'" + vm.settings.data + "'!" + "1:1",
-            // valueRenderOption: "",
-          };
-          vm.ssActions.get = function(data) {
-            var nodata =
-              !Array.isArray(data) || data.length === 0 || data[0].length === 0;
-            if (nodata) {
-              console.log("Your data is empty");
-              data = [[]];
-              vm.$ionic.loadingController.dismiss();
-            } else {
-              console.log("got titles: " + data[0]);
-              f(data);
-            }
-          };
-          vm.ss.send = true;
         }
       },
       immediate: true,
@@ -285,72 +387,12 @@ export default {
     //   deep: false,
     //   immediate: false
     // },
-    updateFlag: {
-      handler: function(val, old) {
-        if (val) {
-          this.updateFlag = false;
-          this.buttonLabel = "スプレッドシートにデータを送信中...";
-          this.loadingText = this.buttonLabel;
-          this.load = true;
-
-          this.ss.method = "set";
-          this.ss.params = {
-            spreadsheetId: this.settings.SS_ID,
-            range:
-              "'" + this.settings.data + "'!" + "A:" + A1(this.titles.length),
-            valueInputOption: "RAW",
-          };
-          this.ss.values = this.valuesArray;
-          console.log(this.ss.values);
-          this.ss.majorDimension = "COLUMNS";
-          var vm = this;
-          this.ssActions.set = updateIndex;
-          this.ss.send = true;
-
-          function updateIndex() {
-            vm.ss.method = "set";
-            vm.ss.params = {
-              spreadsheetId: vm.settings.SS_ID,
-              range: "'" + vm.settings.index + "'!" + "A:A",
-              valueInputOption: "RAW",
-            };
-            vm.ss.values = [vm.titles];
-            console.log(vm.ss.values);
-            vm.ss.majorDimension = "COLUMNS";
-            vm.ssActions.set = function() {
-              vm.buttonLabel = "保存";
-              vm.$ionic.loadingController.dismiss();
-            };
-            vm.ss.send = true;
-          }
-        }
-      },
-      immediate: false,
-    },
   },
   methods: {
-    doReorder(event) {
-      var changed = event.detail.complete(this.titles);
-      for (var i = 0; i < changed.length; i++) {
-        if (changed[i] !== this.titles[i]) {
-          this.$set(this.titles, i, changed[i]);
-        }
-      }
-    },
     handler(error) {
       this.$ionic.loadingController.dismiss();
-      this.errorText += "Error! " + error.result.error.message;
+      this.errorText = "Error! " + error.result.error.message;
     },
-    // report(ev) {
-    //   console.log("report");
-    //   console.log(ev);
-    //   console.log(ev.target.parentNode.open);
-    //   console.log(
-    //     !ev.target.parentNode.open && ev.target.parentNode.parentNode
-    //   );
-    //   this.target =
-    //     !ev.target.parentNode.open && ev.target.parentNode.parentNode;
-    // },
     showTree(name) {
       // console.log("report2");
       console.log(this.target);
@@ -365,11 +407,9 @@ export default {
         this.target = arr;
       }
     },
-  },
-  beforeDestroy() {
-    if (confirm("作業内容を保存しますか？")) {
-      this.updateFlag = true;
-    }
+    modeChange(selected) {
+      this.mode = selected;
+    },
   },
 };
 </script>
@@ -378,5 +418,9 @@ export default {
 ion-reorder {
   float: right;
   padding-right: 10px;
+}
+
+ion-content {
+  font-family: "Sawarabi Mincho";
 }
 </style>
